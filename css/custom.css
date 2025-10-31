@@ -1,8 +1,3 @@
-/* ===== 通用毛玻璃基础样式 ===== 
-.card-widget {
-  background: rgb(255,250,250) !important;
-  backdrop-filter: blur(6px);
-}*/
 /* 个人信息Follow me按钮 
 #aside-content > .card-widget.card-info > #card-info-btn {
   background-color: #7019c2f8;
@@ -19,7 +14,6 @@
   background: rgba(45, 10, 61, 0.7) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
 }*/
-
 /*导航栏
 .nav-fixed>#nav {
   background: linear-gradient(-45deg, #e0c1fa55, #fdbde755, #cfb5fc55, #fcbffa55) !important;
@@ -86,15 +80,14 @@
 }
 */
 .layout.hide-aside {
- max-width: 1600px;
+  max-width: 1600px;
 }
 /* 设置黑夜的时候，社交按钮为白色 */
 [data-theme=dark] .social-icon i {
-  color: rgba(188, 188, 188) !important; /* 设置为白色 */
+  color: #bcbcbc !important; /* 设置为白色 */
 }
-
-body{
-    background: linear-gradient(90deg, rgba(247, 149, 51, 0.1) 0, rgba(243, 112, 85, 0.1) 15%, rgba(239, 78, 123, 0.1) 30%, rgba(161, 102, 171, 0.1) 44%, rgba(80, 115, 184, 0.1) 58%, rgba(16, 152, 173, 0.1) 72%, rgba(7, 179, 155, 0.1) 86%, rgba(109, 186, 130, 0.1) 100%);
+body {
+  background: linear-gradient(90deg, rgba(247,149,51,0.1) 0, rgba(243,112,85,0.1) 15%, rgba(239,78,123,0.1) 30%, rgba(161,102,171,0.1) 44%, rgba(80,115,184,0.1) 58%, rgba(16,152,173,0.1) 72%, rgba(7,179,155,0.1) 86%, rgba(109,186,130,0.1) 100%);
 }
 [data-theme='dark'] body {
   background: #000 !important;
