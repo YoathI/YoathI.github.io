@@ -108,3 +108,6 @@ body {
   background: rgba(255,255,255,0.45);
   backdrop-filter: blur(8px);
 }
+[data-theme='dark'] #page:has(.category-lists) {
+  background: var(--card-bg);
+}
