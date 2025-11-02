@@ -1,0 +1,113 @@
+/* 核心分类列表项样式 */
+#page .category-lists .category-list .category-list-item {
+  position: relative;
+  display: inline-block;
+/* 调整宽度为约 23.5%，以容纳四列并留出间距 */
+  width: 23.5%;
+  padding: 1rem 1rem; /* 调整 padding */
+  font-weight: 700;
+/* 调整 margin，使左右间距更小，适应四列布局 */
+  margin: 0 0.75% 1.5% 0.75%;
+  border-radius: var(--border-radius);
+/* 移除 inset 阴影，与白色背景不协调，改为柔和的外部阴影 */
+/* -webkit-box-shadow: rgb(50 50 50 / 30%) 50px 50px 50px 50px inset; */
+/* box-shadow: rgb(50 50 50 / 30%) 50px 50px 50px 50px inset; */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 添加柔和外部阴影 */
+  background: #fff; /* **主背景改为白色** */
+  border-radius: 8px;
+/* 新增：过渡效果，让 hover 更平滑 */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+[data-theme=dark] #page .category-lists .category-list .category-list-item {
+  background: #808080;
+}
+/* 列表项 hover 效果 - 略微抬起和放大阴影 */
+#page .category-lists .category-list .category-list-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+/* 媒体查询：小屏幕（如手机）下保持单列，适应性不变 */
+@media (max-width: 640px) {
+  #page .category-lists .category-list .category-list-item {
+    width: 95%; /* 手机视图下保持大宽度 */
+    margin: 3px auto; /* 居中显示 */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 手机阴影略小 */
+  }
+  #page .category-lists .category-list .category-list-item:hover {
+    transform: none; /* 手机端取消抬起效果 */
+  }
+}
+#page .category-lists .category-list .category-list-item::before {
+  display: none;
+}
+/* 分类链接和计数器包裹容器 (重要：实现文字和数字同行) */
+#page .category-lists .category-list .category-list-item a.category-list-link {
+  display: flex; /* 使用 Flexbox */
+  align-items: center; /* 垂直居中对齐 */
+  justify-content: space-between; /* 链接和计数器之间留白 */
+  color: #333; /* **文字颜色适应白色背景** */
+  font-size: 1.2rem; /* 字体大小略微调小，适应四列 */
+  margin: 0;
+  padding-right: 1.5rem; /* 预留给右侧图标空间 */
+}
+/* 分类计数器样式 */
+#page .category-lists .category-list .category-list-item .category-list-count {
+  color: #888; /* **数字颜色调整为柔和的灰色** */
+  font-size: 1.2rem; /* 字体大小与链接保持一致 */
+  font-weight: 500; /* 略微降低字重 */
+/* 移除 margin-left 以实现紧凑排列 */
+  margin-left: 0.5rem;
+}
+#page .category-lists .category-list .category-list-item .category-list-count::after {
+  content: ""; /* 删除右括号 */
+}
+#page .category-lists .category-list .category-list-item .category-list-count::before {
+  content: "\f02d";
+  padding-right: 15px;
+  font-family: FontAwesome;
+}
+/* 覆盖原代码中可能隐藏计数器 ::after 的样式 */
+#page .category-list-count::after {
+  display: inline;
+}
+/* 链接下划线 (hover 效果) */
+#page .category-lists .category-list .category-list-item .category-list-link::after {
+  content: "";
+  position: absolute; /* 相对于列表项定位 */
+  width: 0;
+  bottom: 0;
+  left: 1rem; /* 调整起始位置 */
+  display: block;
+  height: 3px;
+  border-radius: 3px;
+  background: #ffc0cb; /* **下划线颜色改为主题蓝** */
+}
+#page .category-lists .category-list .category-list-item .category-list-link:hover::after {
+  width: calc(100% - 2rem); /* 撑满列表项的宽度减去 padding */
+  left: 1rem;
+  transition: all 0.6s;
+}
+/* 右侧大图标样式 (保持不变，但颜色需要调整，因为背景已改为白色) */
+#page .category-lists .category-list li.category-list-item a.category-list-link::before {
+/* 保持原有的位置、大小、过渡和旋转效果 */
+  position: absolute;
+  font-size: 4rem;
+  line-height: 4rem;
+  top: 1rem;
+  right: 1rem;
+  color: rgba(0,0,0,0.1); /* **图标颜色改为浅灰/半透明，作为装饰** */
+  border-radius: 8px;
+  transform: rotate(-15deg);
+  transition: all 0.6s;
+}
+#page .category-lists .category-list li.category-list-item a.category-list-link:hover::before {
+  opacity: 0.8; /* hover 时略微明显 */
+  transform: rotate(0);
+}
+#page .category-lists .category-list li.category-list-item {
+/* background 移除，使用白色背景 */
+  border-left: 5px solid #ffc0cb; /* 添加左侧强调色 */
+}
+#page .category-lists .category-list li.category-list-item a.category-list-link::before {
+  content: "📑";
+}

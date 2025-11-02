@@ -1,0 +1,113 @@
+/* ===== 通用毛玻璃基础样式 ===== 
+.card-widget {
+  background: rgb(255,250,250) !important;
+  backdrop-filter: blur(6px);
+}*/
+/* 个人信息Follow me按钮 
+#aside-content > .card-widget.card-info > #card-info-btn {
+  background-color: #7019c2f8;
+  border-radius: 8px;
+}*/
+/* ===== 动画定义 ===== 
+@keyframes Gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}*/
+/* ===== 暗夜模式适配 ===== 
+[data-theme="dark"] .card-widget{
+  background: rgba(45, 10, 61, 0.7) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}*/
+/*导航栏
+.nav-fixed>#nav {
+  background: linear-gradient(-45deg, #e0c1fa55, #fdbde755, #cfb5fc55, #fcbffa55) !important;
+  backdrop-filter: blur(10px);
+}
+[data-theme="dark"] .nav-fixed>#nav{
+  background: rgba(45, 10, 61, 0.7) !important;
+  backdrop-filter: blur(10px);
+}*/
+/*文章页面
+.layout>#post {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+
+[data-theme=dark] .layout>#post {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+*/
+/*主页文章轮播页面
+#recent-posts>.recent-post-item {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+[data-theme=dark] #recent-posts>.recent-post-item {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+*/
+/*主页文章列表页面卡片
+#recent-posts>.recent-post-items .recent-post-item{
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+[data-theme=dark] #recent-posts>.recent-post-items .recent-post-item{
+  background: rgba(45, 10, 61, 0.7) !important;
+}*/
+/*分类页面
+.layout>#page {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) ;
+}
+[data-theme=dark] .layout>#page {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+*/
+/*归档页面
+.layout>#archive {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+[data-theme=dark] .layout>#archive {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+*/
+/*分类点进去的页面
+.layout>#category {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+[data-theme=dark] .layout>#category {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+*/
+/*标签点进去的页面
+.layout>#tag {
+  background: linear-gradient(-45deg, #e0bcffdd, #ffd3f0dd, #d5bdffdd, #ffdafedd) !important;
+}
+[data-theme=dark] .layout>#tag {
+  background: rgba(45, 10, 61, 0.7) !important;
+}
+*/
+.layout.hide-aside {
+  max-width: 1600px;
+}
+/* 设置黑夜的时候，社交按钮为白色 */
+[data-theme=dark] .social-icon i {
+  color: #bcbcbc !important; /* 设置为白色 */
+}
+body {
+  background: linear-gradient(90deg, rgba(247,149,51,0.1) 0, rgba(243,112,85,0.1) 15%, rgba(239,78,123,0.1) 30%, rgba(161,102,171,0.1) 44%, rgba(80,115,184,0.1) 58%, rgba(16,152,173,0.1) 72%, rgba(7,179,155,0.1) 86%, rgba(109,186,130,0.1) 100%);
+}
+[data-theme='dark'] body {
+  background: #000 !important;
+}
+#page:has(.tag-cloud-list):has(.text-center) {
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(8px);
+}
+[data-theme='dark'] #page:has(.tag-cloud-list):has(.text-center) {
+  background: var(--card-bg);
+}
+#page:has(.category-lists) {
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(8px);
+}
+[data-theme='dark'] #page:has(.category-lists) {
+  background: var(--card-bg);
+}
