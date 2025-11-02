@@ -1,21 +1,21 @@
-/* 核心分类列表项样式 */
+#page .category-lists .category-list {
+  display: flex;
+  flex-wrap: wrap; /* 自动换行 */
+  justify-content: center; /* 居中对齐 */
+  gap: 1rem; /* 元素之间的间距 */
+  padding: 0;
+}
+/* 分类项 */
 #page .category-lists .category-list .category-list-item {
+  flex: 0 1 31.5%; /* 每个元素大约占三分之一宽度，自动缩放 */
+  max-width: 31.5%;
+  box-sizing: border-box;
   position: relative;
-  display: inline-block;
-/* 调整宽度为约 23.5%，以容纳四列并留出间距 */
-  width: 23.5%;
-  padding: 1rem 1rem; /* 调整 padding */
+  padding: 1rem;
   font-weight: 700;
-/* 调整 margin，使左右间距更小，适应四列布局 */
-  margin: 0 0.75% 1.5% 0.75%;
-  border-radius: var(--border-radius);
-/* 移除 inset 阴影，与白色背景不协调，改为柔和的外部阴影 */
-/* -webkit-box-shadow: rgb(50 50 50 / 30%) 50px 50px 50px 50px inset; */
-/* box-shadow: rgb(50 50 50 / 30%) 50px 50px 50px 50px inset; */
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 添加柔和外部阴影 */
-  background: #fff; /* **主背景改为白色** */
   border-radius: 8px;
-/* 新增：过渡效果，让 hover 更平滑 */
+  background: #fff;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 [data-theme=dark] #page .category-lists .category-list .category-list-item {
