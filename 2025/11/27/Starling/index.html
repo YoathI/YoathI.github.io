@@ -1,0 +1,348 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Starling | YoathI' Blog</title><meta name="author" content="YoathI"><meta name="copyright" content="YoathI"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="总结              本文提出一种面向数据段高维向量相似性搜索的I/O高效磁盘驻留图索引框架，该框架通过优化数据布局和搜索策略，在不增加额外空间开销的前提下提升搜索性能。（在存储空间与内存空间限制的条件下，实现高搜索精度与效率。）         研究背景相对于单机维护大型向量索引，主流向量数据库更倾向于数据分片，将大规模数据分区为多个段，并为单机分配适量数据段。每个段在受限存">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Starling">
+<meta property="og:url" content="https://yoathi.github.io/2025/11/27/Starling/index.html">
+<meta property="og:site_name" content="YoathI' Blog">
+<meta property="og:description" content="总结              本文提出一种面向数据段高维向量相似性搜索的I/O高效磁盘驻留图索引框架，该框架通过优化数据布局和搜索策略，在不增加额外空间开销的前提下提升搜索性能。（在存储空间与内存空间限制的条件下，实现高搜索精度与效率。）         研究背景相对于单机维护大型向量索引，主流向量数据库更倾向于数据分片，将大规模数据分区为多个段，并为单机分配适量数据段。每个段在受限存">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yoathi.github.io/img/favicon.jpg">
+<meta property="article:published_time" content="2025-11-27T03:42:54.000Z">
+<meta property="article:modified_time" content="2025-11-27T03:43:36.305Z">
+<meta property="article:author" content="YoathI">
+<meta property="article:tag" content="ANN向量索引策略">
+<meta property="article:tag" content="SSD">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yoathi.github.io/img/favicon.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Starling",
+  "url": "https://yoathi.github.io/2025/11/27/Starling/",
+  "image": "https://yoathi.github.io/img/favicon.jpg",
+  "datePublished": "2025-11-27T03:42:54.000Z",
+  "dateModified": "2025-11-27T03:43:36.305Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YoathI",
+      "url": "https://YoathI.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.jpg"><link rel="canonical" href="https://yoathi.github.io/2025/11/27/Starling/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="preconnect" href="//busuanzi.ibruce.info"><link rel="stylesheet" href="/css/index.css?v=5.5.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.json","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Starling',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="/css/modify.css"><link rel="stylesheet" href="/css/layout.css"><link rel="stylesheet" href="/css/icat.css"><meta name="generator" content="Hexo 8.1.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/favicon.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">8</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">9</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">YoathI' Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Starling</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!--菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><!-- 搜索按钮--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Starling</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-11-27T03:42:54.000Z" title="发表于 2025-11-27 11:42:54">2025-11-27</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-11-27T03:43:36.305Z" title="更新于 2025-11-27 11:43:36">2025-11-27</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%9F%BA%E4%BA%8ESSD%E7%9A%84ANN%E6%A3%80%E7%B4%A2%E7%AD%96%E7%95%A5/">基于SSD的ANN检索策略</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">3.9k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>12分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div style="background:#f7f7f7; padding:10px 15px; border-left:4px solid #ccc; color:#666;">
+    <strong>总结</strong>
+    <p style="color:#888; font-size:0.9em; text-indent: 2em;">
+        本文提出一种面向数据段高维向量相似性搜索的I/O高效磁盘驻留图索引框架，该框架通过优化数据布局和搜索策略，在不增加额外空间开销的前提下提升搜索性能。（在存储空间与内存空间限制的条件下，实现高搜索精度与效率。）
+    </p>
+</div>
+
+
+<h1 id="研究背景"><a href="#研究背景" class="headerlink" title="研究背景"></a>研究背景</h1><p>相对于单机维护大型向量索引，主流向量数据库更倾向于数据分片，将大规模数据分区为多个段，并为单机分配适量数据段。每个段在受限存储容量和计算资源下运行，并在各段构建中型索引以实现自主搜索。通过特定数据分片策略与查询协调器，可在向量查询执行时仅搜索机器的少数数据段。但是现有工作未能兼顾搜索性能与空间成本以在数据段上实现有效的高维度向量相似性搜索（HVSS），而是直接应用基于磁盘的方法来处理大规模数据。</p>
+<h1 id="研究现状"><a href="#研究现状" class="headerlink" title="研究现状"></a>研究现状</h1><p>现有的基于磁盘的HVSS方法在数据布局和搜索策略仍然遵循基于内存解决方案的范式，导致大量磁盘I/O，限制了给定空间成本下的搜索性能。以DiskANN为例：<strong>搜索路径过长</strong>，搜索过程中每一跳对应一次I/O请求，造成大量磁盘I/O，导致高搜索延迟；<strong>数据局部性差</strong>，搜索过程中的I/O仅单个节点为有效数据，从磁盘读取的数据大部分被浪费，磁盘带宽无法充分有效利用。</p>
+<h1 id="框架概述"><a href="#框架概述" class="headerlink" title="框架概述"></a>框架概述</h1><p>Starling是一个旨在提升数据段上基于磁盘的图索引对于HVSS 的I/O 效率的框架。Starling通过优化数据布局以提高数据局部性，并通过优化搜索策略以减少磁盘I/O次数。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251123212641878.png" alt="image-20251123212641878" style="zoom:75%;"></p>
+<center><strong>Starling框架图（图右）</strong></center>
+
+<h2 id="基准框架"><a href="#基准框架" class="headerlink" title="基准框架"></a>基准框架</h2><p>基准框架（DiskANN）将ID连续的顶点存储在相同的数据块中；基准框架采用固定或随机顶点作为搜索入口。</p>
+<ul>
+<li>数据块内ID连续的顶点并不具备空间邻近性，故基准框架存在数据局部性差的问题。</li>
+<li>在数据块的非目标顶点中找到邻近目标顶点的概率过低，无法有效提升效率。因此基准框架仅检查目标顶点而丢弃其余数据，导致单次磁盘I/O的顶点利用率偏低。</li>
+</ul>
+<h2 id="Starling框架"><a href="#Starling框架" class="headerlink" title="Starling框架"></a>Starling框架</h2><p><strong>数据布局：</strong></p>
+<ul>
+<li>磁盘上的数据布局：Starling尽量将顶点及其邻居顶点存储在同一数据块，从而提高数据局部性，使得单次磁盘访问不仅能获取目标顶点还能获取其他可能的候选顶点，提高了顶点利用率，并潜在减少了磁盘I/O次数。</li>
+<li>内存中的数据布局：Starling使用内存中的导航图为基于磁盘的图识别查询相关的入口点。Starling通过内存图算法和从磁盘图中采样的小部分向量来构建导航图。对给定查询，Starling搜索导航图以获取接近查询的顶点作为入口点。然后，在磁盘上的图索引基于选定的入口点进行搜索，有效缩短了磁盘图的搜索路径长度。</li>
+</ul>
+<p><strong>搜索策略：</strong></p>
+<ul>
+<li>Starling采用块搜索策略以利用数据局部性。对于每个加载的块，Starling计算顶点到查询点的距离，选择接近查询的顶点，并检查其邻居顶点以查找新的搜索候选。（降低磁盘I/O操作，但增加计算成本，Starling对此进行特定优化，详见<a href="#BlockSearch">Block Search</a>）</li>
+</ul>
+<p>&gt; eg：相比b中搜索过程需要经过五跳和六次访问磁盘。Starling只需访问磁盘三次，具体的块搜索过程：(1) 加载块0并访问其中的顶点12、0、7和8，计算它们到查询的距离，并选择顶点0访问其邻居。(2) 加载包含顶点{2,5,9,14} 的块 1，并选择顶点9作为下一跳。当Starling 根据顶点11加载下 一个块时，将找到作为搜索结果的顶点3。通过在内存中构建基于向量{4,8,9}的导航图，它获得顶点9作为磁盘图搜索的入口点。由于顶点9接近查询，仅需两次磁盘I/O（一次访问入口点，一次访问其邻居）即可获得查询结果。</p>
+<h1 id="数据布局"><a href="#数据布局" class="headerlink" title="数据布局"></a>数据布局</h1><p>Starling磁盘上图索引的块重排和构建内存导航图，来缩短搜索路径长度、减少搜索过程中的磁盘I/O次数并提高顶点利用率。</p>
+<h2 id="Block-Shuffling-on-the-Disk"><a href="#Block-Shuffling-on-the-Disk" class="headerlink" title="Block Shuffling on the Disk"></a>Block Shuffling on the Disk</h2><p>Starling使用图索引G的重叠率 OR(G)来衡量图布局的局部性。其中OR(u)表示在u所在块中除u外所有顶点中其邻居顶点所占的比例。</p>
+<p>OR(u) =  ( |B (u )∩N (u ) ) |  |B (u) |−1 |B (u) | &gt; 1  0 |B(u)| ≤ 1</p>
+<p>B(u)表示包含顶点u的块内所有顶点的集合；N(u)为u的邻居集合。</p>
+<p>块重排：给定基于磁盘的图索引G的图布局，块重排的目标就是将n个顶点分配到m个块，以获得max OR(G)的新布局。Starling提出了三种启发式算法来处理重拍问题，如图所示：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251125160340688.png" alt="image-20251125160340688" style="zoom:80%;"></p>
+<center><strong>启发式Block Shuffling策略</strong></center>
+
+<p><strong>Block Neighbor Padding</strong></p>
+<p>BNP算法逐一填充磁盘块。在填充过程中，按顶点ID升序检查顶点。若顶点u尚未分配至任何块，则尝试将该顶点及其邻接顶点分配至当前块。当块填满后，算法开启新块并继续分配顶点。</p>
+<p style="color:#888; font-size:0.9em;">
+    <i>
+        BNP 的时间复杂度为 O (|V |)，并通过将顶点及其邻居分配给同一块来提高重叠率 OR(G)。然而，这种改进是有限的，因为 u 的一些邻居（表示为 z, v ∈ N (u)）可能彼此不相邻，这会降低 OR(z) 或 OR(v)。此外，u的一些邻居可能更早被分配给其他块，例如z也是o的邻居，其ID比u小。它不能与 u 一起存储，因为只存储每个顶点一次。
+    </i>
+</p>
+
+
+<p><strong>Block Neighbor Frequency</strong></p>
+<p>BNF算法以BNP算法的结果作为初始布局，迭代优化OR(G)。该算法的目标是将顶点分配至包含其最多邻接顶点的块，即邻接频次最高的块。算法如下：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251125163222415.png" alt="image-20251125163222415" style="zoom: 75%;"></p>
+<center><strong>BNF算法</strong></center>
+
+<p>输入：初始块级布局（来自 BNP），即每个顶点当前所属的块（集合 B0…B_{ρ-1}）；最大迭代次数 β；OR(G) 增益阈值 τ（当本轮迭代对 OR(G) 的提升小于 τ，则停止）。输出：新的块布局。B为所有块的集合，ρ为块的数量，D为每个顶点到所属块的映射。</p>
+<p>算法流程：</p>
+<ol>
+<li>保存当前顶点ID至块ID的映射，并清空G的所有块。</li>
+<li>对每个顶点v：<ol>
+<li>获取u的邻接节点所属块的ID集合H。</li>
+<li>如果H非空，进行循环操作，选择H中拥有u邻居最多的块ID并记为x。如果块B_x还有容量，则将u放入该块并退出循环，否则（块已满），把x从集合H中移除，继续尝试下一个频次最高的块。</li>
+<li>如果H为空，则把节点u加入空块。（u 放入其他候选块不会改善目标，则把它放到空块以避免损害全局结构）。</li>
+</ol>
+</li>
+<li>计算 OR(G) 的增益（相对于上次迭代的布局），如果提升小于阈值 τ，则提前终止（认为收敛或无显著改进）。</li>
+<li>当迭代次数超过β，返回图索引G的新布局。</li>
+</ol>
+<p><strong>Block Neighbor Swap</strong><br>BNS算法以BNP或BNF算法的结果为初始布局来优化OR(G)。在BNS中，对于顶点u的邻接节点a和e，分别属于块B(a)和B(e)，交换B(a)和B(e)中重叠比（OR）最低的顶点，以增加OR(B(a)) 和 OR(B(e)) 的总和。</p>
+<ul>
+<li>在BNS算法中，图的OR(G) 是迭代次数β 的单调非减函数。</li>
+<li>每次迭代中，更新操作是局部的，仅影响两个块内的顶点，OR(G) 不会随着迭代次数的增加而减少。</li>
+<li>只有在交换后两块OR之和增加时，才会对两个块中“最低OR”的顶点进行互换。</li>
+</ul>
+<p>对比三种算法，BNF在效率和效果之间平衡最佳。BNS时间复杂度高，但能确保OR(G)随迭代次数不降，且OR(G)的提升最显著。相较于图索引构建过程，块重排引入的额外时间成本相对较低，且不会增加额外的空间开销。</p>
+<h2 id="In-Memory-Navigation-Graph"><a href="#In-Memory-Navigation-Graph" class="headerlink" title="In-Memory Navigation Graph"></a>In-Memory Navigation Graph</h2><p>Starling通过内存导航图为基于磁盘的图搜索寻找更优的入口点来减小搜索路径长度。构建步骤：</p>
+<ol>
+<li><strong>数据采样：</strong>从一个段（segment）里的所有数据中，按段的内存限制随机抽取一部分数据点作为样本。</li>
+<li><strong>图索引构建：</strong>采用与磁盘图相同的算法，在采样数据上建立导航图。该导航图常驻内存，能快速返回邻近查询的动态入口点。</li>
+</ol>
+<h1 id="搜索策略"><a href="#搜索策略" class="headerlink" title="搜索策略"></a>搜索策略</h1><p>Starling 的搜索策略包含两大组成部分：(1) 内存导航图上的顶点搜索与(2)磁盘驻留图上的块搜索。内存导航图旨在无需磁盘访问即可快速导航至查询邻近区域，采用了与现有图算法相同的顶点搜索策略。顶点搜索结果作为第二部分的入口点。为利用提升的数据局部性，块搜索在每次磁盘I/O中不仅探索目标顶点，还探查同一块内的其他顶点。</p>
+<p><a id="BlockSearch"></a></p>
+<h2 id="Block-Search"><a href="#Block-Search" class="headerlink" title="Block Search"></a>Block Search</h2><p> Starling 离线阶段将顶点及其邻近节点分配至同一数据块，以增强数据局部性。这种方式使得每次从磁盘读取的在线数据块能提供多个相关顶点。其块搜索策略能高效探索数据块内所有有效数据：通过计算块内各顶点至查询向量的距离来更新当前搜索结果，同时检测距离较近顶点的邻居ID以发掘新候选节点。Starling还通过三项计算优化策略来提升块搜索机制并优化搜索过程增加的计算成本。</p>
+<p><strong>Block pruning</strong></p>
+<p>Block Shuffling在多数现实数据集上的OR值在0.3到0.6之间，说明数据块内存在无关顶点。为避免探索无效数据， Starling 对加载的每个数据块进行剪枝：首先按顶点与查询向量距离升序排列，仅检测前((ε−1)·σ)个 顶点的邻居ID（其中(ε−1)为块内除目标顶点外的顶点数，σ为取值区间在(0&lt;σ≤1)的剪枝率），从而提前剔除远端顶点的邻居ID。实验表明，当σ=0.3时系统始终能获得最优性能。</p>
+<p><strong>I/O and computation pipeline</strong></p>
+<p>块搜索阶段的主要操作包括磁盘读取（DR）和距离计算（DC）。对此，Starling 采用 I/O 与计算流水线技术实现 DR 与DC的并行执行：先对当前加载块中的目标顶点u执行DC，然后在启动下一轮DR的同时，并行处理含u数据块内其他顶点的 DC（详见<a href="#ANNS">ANNS算法</a>）。</p>
+<p><strong>PQ-based approximate distance</strong></p>
+<p>由于单个顶点的邻居数量通常远超块内顶点数，许多邻接节点的访问仍然需要额外磁盘I/O。对此，Starling使用乘积量化PQ对全数据集进行预处理，将全精度向量编码为可驻留内存的短码，采用近似距离代替全精度向量精确计算（即通过PQ近似距离来进行下一跳的决策）。</p>
+<h2 id="Approximate-Nearest-Neighbor-Search"><a href="#Approximate-Nearest-Neighbor-Search" class="headerlink" title="Approximate Nearest Neighbor Search"></a>Approximate Nearest Neighbor Search</h2><p>在近似最相邻搜索策略中，Starling采用the candidate set 和 the result set来存储候选结果和搜索结果。搜索过程开始时，将从内存导航图获取的入口点加入候选集。然后，从候选集中选取距离查询点最近的未访问顶点执行块搜索，并根据搜索结果更新两个集合。当候选集中所有顶点均被访问后，流程终止。算法流程如下：</p>
+<p><a id="ANNS"></a></p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251127093104384.png" alt="image-20251127093104384" style="zoom:80%;"></p>
+<center><strong>ANNS 算法</strong></center>
+
+<p>输入：内存导航图Gm，PQ短码，磁盘图Gd，候选集合C，结果集R，裁剪比σ。输出：查询点q的Top-k结果</p>
+<p>算法流程：</p>
+<ol>
+<li>从内存图上搜索，获取入口点集合S。然后，计算集合S中点到q的PQ距离，然后排序将其加入集合C和计算集合S中点到q的精确距离，将其加入到集合R。</li>
+<li>从 C 中取 PQ 距离最小且尚未被访问的顶点 u。</li>
+<li>从磁盘图（Gd）加载包含顶点 u 的数据块。</li>
+<li>根据顶点 u 的邻接顶点更新候选集合 C。然后，计算u与q的精确距离并将其加入到结果集R。</li>
+<li>在已加载的块B中（去掉 u 本身），选取前 ((ε−1)·σ) 个顶点组成 B′。</li>
+<li>当候选集C中存在未访问节点时进行循环：选择 C 中 PQ 距离最小的未访问顶点 v ，为 v 执行第3步（加载包含 v 的块 Bv），并对B’中的顶点同步执行第4步。当包含 v 的块 Bv 被加载后，对块 Bv 执行第4、5步。</li>
+<li>最终返回查询点q的Top-k结果。</li>
+</ol>
+<h2 id="Range-Search"><a href="#Range-Search" class="headerlink" title="Range Search"></a>Range Search</h2><p>范围搜索（RS）旨在检索所有与查询向量 q 的距离在给定半径r以内的向量。结果长度取决于向量分布，不同查询间差异显著。Starling 基于块搜索对查询 q 执行 RS。它使用候选集C、结果集R和踢出集P分别存储候选顶点、结果和从C中踢出的顶点。 Starling 动态更改 C 的长度限制以处理不同的结果长度。</p>
+<p>RS的步骤如下：</p>
+<ol>
+<li>它从内存中的导航图中获取入口点并用它们初始化C和R。</li>
+<li>它迭代地探索C并更新C和R（像ANNS）。它还将从C中踢出的未访问顶点添加到P中。</li>
+<li>当C中的所有顶点都被访问时，它计算R的长度与C的长度之比。给定比率阈值 φ，如果|R| / |C | ≥ φ，将集合 C 的规模扩大一倍并重新开始搜索。这是因为高比率意味着大多数候选对象都是结果。在这种情况下，探索更多的顶点可能会发现新的结果。</li>
+<li>在下一次搜索中，Starling 将 P 中较接近的顶点（相对于q）添加到 C 中，并对 C 中未访问过的候选点重复 (2)–(3)。</li>
+<li>|R| / |C | ≥ φ未满足，搜索停止。</li>
+</ol>
+<p>调整 C 的长度后，它会使用之前的结果集R、候选集C 以及集合P 中一些更 接近（相对于q）的顶点继续进行，从而避免了额外的计算和磁盘访问。。评估表明 φ = 0.5 是最佳的。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://YoathI.github.io">YoathI</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://yoathi.github.io/2025/11/27/Starling/">https://yoathi.github.io/2025/11/27/Starling/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://YoathI.github.io" target="_blank">YoathI' Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/ANN%E5%90%91%E9%87%8F%E7%B4%A2%E5%BC%95%E7%AD%96%E7%95%A5/">ANN向量索引策略</a><a class="post-meta__tags" href="/tags/SSD/">SSD</a></div><div class="post-share"><div class="social-share" data-image="/img/favicon.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer=""></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2025/11/16/HM-ANN/" title="HM-ANN"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">HM-ANN</div></div><div class="info-2"><div class="info-item-1">     总结              本文基于异构内存（由PMem和DRAM组成）提出HM-ANN向量检索策略，综合考虑内存与数据的异构性，在无需压缩的情况下实现了单节点上的十亿级别的相似性检索。                   具体技术：1、改进HNSW算法，引入自上而下插入和自下而上提升阶段：对于HNSW算法构建最底层进行保留并置于慢速内存中；从底层图中提升枢纽节点形成上层图结构并置于快速内存；2、通过动态迁移等内存管理技术，实现从慢速内存预取待访问数据到快速内存，并通过并行搜索降低慢速内存中的搜索耗时；3、建立性能模型以根据搜索时间与召回率约束自动选择超参数。         研究背景因内存容量限制，ANNS算法的设计需要平衡精度与效率。现有的基于SSD的解决方案会大大增加I/O操作时间。异构内存可以大幅度增加内存容量，以便ANNS算法同时兼顾精度和效率，为ANNS算法的设计提供了新机遇。 异构内存 异构内存HM由高容量内存技术和高性能内存技术构成：  高容量内存：如NVM、SSD，容量大但访问延迟高。 高性能内存：如DRAM、HBM，容量小但访问延迟低。  具体技...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2025/10/31/DiskANN/" title="DiskANN论文阅读笔记"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/DiskANN-cover.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-10-31</div><div class="info-item-2">DiskANN论文阅读笔记</div></div><div class="info-2"><div class="info-item-1">DiskANN是面向SSD的十亿规模高效向量检索方案，其目标就是在单台机器上，使用有限的内存，实现对十亿级数据集的快速、高精度的最近邻搜索。 研究现状当前最先进的近似最相邻算法为了保证快速的高召回率，其产生的索引必须存储在内存中。但对于大规模高维数量集，单台服务器的内存容量会成为算法瓶颈，而使用分布式服务器对索引进行存储也会造成额外的磁盘访问开销和扩展成本较高。对于这些针对内存所设计的向量检索算法，如果将算法所构建的索引存储在SSD或采用混合模式会使得其实现比较复杂，还会造成搜索性能较差（搜索延迟灾难性上升和吞吐量急剧下降）。因此，如何突破内存容量的限制，实现既能处理海量数据又能保持低延迟的“磁盘友好型”向量搜索算法显得十分重要。 具体技术本文介绍了一种新型的基于图的索引构建算法Vamana，以及DiskANN整体系统的设计。 Vamana算法Vamana算法通过图结构优化减少磁盘访问次数。 Vamana算法使用GreedySearch算法和RobustProne算法进行图的构建，所构建的图为有向图。GreedySearch算法为节点选取出边邻居，RobustProne算法通过剪...</div></div></div></a><a class="pagination-related" href="/2025/11/11/SPANN/" title="SPANN"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-11-11</div><div class="info-item-2">SPANN</div></div><div class="info-2"><div class="info-item-1">研究背景目前针对超大规模向量检索场景的混合ANNS方案，如DiskANN、HM-ANN，都是基于图的解决方案。本文论证了简单倒排索引方法同样能在大规模数据集上实现召回率、延迟与内存成本的顶尖性能。 SPANN概述不同于以往基于倒排索引且依赖有损数据压缩来降低内存开销的方法，SPANN采用了一种简洁的内存-磁盘混合方案。 索引结构：数据向量X被划分为N 个倒排列表${\mathbf{X}_1,\mathbf{X}_2,\cdots,\mathbf{X}_N}$，$\mathrm{X}_1\mathrm{X}_2\cup…\cup\mathrm{X}_N=\mathrm{X}^3$。这些倒排列表的质心$\mathbf{c}_1,\mathbf{c}_2,\cdots,\mathbf{c}_N$存储在内存中作为快速粗粒度索引，指向磁盘中对应倒排列表的位置。  局部检索：当查询向量q到来时，我们寻找K个最近邻质心\{c_{i1}, c_{i2}, \ldots, c_{iK}\}, K \ll N，并将这K个最近质心对应的倒排列表X_{i_1}, X_{i_2}, \cdots, X_{...</div></div></div></a><a class="pagination-related" href="/2025/11/09/SmartANNS/" title="SmartANNS"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251109150923716.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-11-09</div><div class="info-item-2">SmartANNS</div></div><div class="info-2"><div class="info-item-1">     概述              传统的ANNS算法需要在内存中维护大量索引，导致难以扩展到大规模数据集。现有的可行解决方案基于普通SSD，但该方案会导致I/O操作在执行时间中占比很大，并且ANNS引擎与其他软件协同工作会竞争PCIe带宽，会导致性能瓶颈。               本文通过在“主机CPU + SmartSSD”协同架构下，通过NDP技术，将高开销的向量搜索任务在SmartSSD上执行，减少与主机CPU的数据传输并降低对主机资源的占用，显著提高大规模数据集的向量搜索性能。               具体技术：1、分层索引架构：使用HBC算法进行分片，并单独为每个分片建立图索引。分片质心存储在主机内存，分片数据和图索引存储在SmartSSD中；2、基于学习的分片剪枝：对于不同的查询任务，通过GBDT模型动态预测需要搜索的最优分片数量，避免无关分片的遍历，降低计算开销；3、动态任务调度：根据分片热度和数据布局，对查询任务进行调度，在多SmartSSD间实现负载均衡与数据重用；4、FPGA优化：在SmartSSD内实现高效的向量搜索核，采用并行距离计算、流水...</div></div></div></a><a class="pagination-related" href="/2025/11/16/HM-ANN/" title="HM-ANN"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-11-16</div><div class="info-item-2">HM-ANN</div></div><div class="info-2"><div class="info-item-1">     总结              本文基于异构内存（由PMem和DRAM组成）提出HM-ANN向量检索策略，综合考虑内存与数据的异构性，在无需压缩的情况下实现了单节点上的十亿级别的相似性检索。                   具体技术：1、改进HNSW算法，引入自上而下插入和自下而上提升阶段：对于HNSW算法构建最底层进行保留并置于慢速内存中；从底层图中提升枢纽节点形成上层图结构并置于快速内存；2、通过动态迁移等内存管理技术，实现从慢速内存预取待访问数据到快速内存，并通过并行搜索降低慢速内存中的搜索耗时；3、建立性能模型以根据搜索时间与召回率约束自动选择超参数。         研究背景因内存容量限制，ANNS算法的设计需要平衡精度与效率。现有的基于SSD的解决方案会大大增加I/O操作时间。异构内存可以大幅度增加内存容量，以便ANNS算法同时兼顾精度和效率，为ANNS算法的设计提供了新机遇。 异构内存 异构内存HM由高容量内存技术和高性能内存技术构成：  高容量内存：如NVM、SSD，容量大但访问延迟高。 高性能内存：如DRAM、HBM，容量小但访问延迟低。  具体技...</div></div></div></a><a class="pagination-related" href="/2025/10/31/LEANN/" title="LEANN论文阅读笔记"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/LEANN-cover.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-10-31</div><div class="info-item-2">LEANN论文阅读笔记</div></div><div class="info-2"><div class="info-item-1">针对ANN向量索引存储开销大而无法部署在资源受限的边缘设备上的问题，该论文针对该问题提出了一种低存储的ANN向量检索策略——LEANN，LEANN通过不存储全部原始向量而在查询时对必要节点重新计算其向量表示的思想，使用即时重计算机制、两级遍历算法和高度数节点保留的剪枝算法等方法，在保证较高召回率和可容忍延迟的前提下，大幅度降低了向量检索在边缘设备上的存储开销。 研究背景目前基于嵌入的搜索（向量检索技术）已经被广泛应用在推荐系统和RAG中，个人设备对此也逐渐突显需求。但由于个人设备存储空间限制和ANN索引存储开销过大的原因，无法在个人设备中存储必要的索引结构。因此，减少索引存储开销和保持搜索质量和延迟成为了关键问题。 行业需求随着智能手机等边缘设备越来越普及，这些设备不断采集并生成多模态数据（如图像、文字、音频等）。这些数据如果能被有效地检索、组合起来，对用户回忆、检索过去信息、辅助智能应用等都有潜在价值。 边缘设备上向量检索的应用：设备端RAG系统、个性化推荐系统、图像与视频内容检索等。 研究动机 动态重算嵌入以节省存储：  传统图索引（如 HNSW）在查询时只会访问少量向量，因...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%A0%94%E7%A9%B6%E8%83%8C%E6%99%AF"><span class="toc-number">1.</span> <span class="toc-text">研究背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%A0%94%E7%A9%B6%E7%8E%B0%E7%8A%B6"><span class="toc-number">2.</span> <span class="toc-text">研究现状</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%A1%86%E6%9E%B6%E6%A6%82%E8%BF%B0"><span class="toc-number">3.</span> <span class="toc-text">框架概述</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9F%BA%E5%87%86%E6%A1%86%E6%9E%B6"><span class="toc-number">3.1.</span> <span class="toc-text">基准框架</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Starling%E6%A1%86%E6%9E%B6"><span class="toc-number">3.2.</span> <span class="toc-text">Starling框架</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E5%B8%83%E5%B1%80"><span class="toc-number">4.</span> <span class="toc-text">数据布局</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Block-Shuffling-on-the-Disk"><span class="toc-number">4.1.</span> <span class="toc-text">Block Shuffling on the Disk</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#In-Memory-Navigation-Graph"><span class="toc-number">4.2.</span> <span class="toc-text">In-Memory Navigation Graph</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%90%9C%E7%B4%A2%E7%AD%96%E7%95%A5"><span class="toc-number">5.</span> <span class="toc-text">搜索策略</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Block-Search"><span class="toc-number">5.1.</span> <span class="toc-text">Block Search</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Approximate-Nearest-Neighbor-Search"><span class="toc-number">5.2.</span> <span class="toc-text">Approximate Nearest Neighbor Search</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Range-Search"><span class="toc-number">5.3.</span> <span class="toc-text">Range Search</span></a></li></ol></li></ol></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">©&nbsp;2025 By YoathI</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.1"></script><script src="/js/main.js?v=5.5.1"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'ams',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zindex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async="" data-pjax="" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词…" type="text"></div><hr><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.1"></script></div></div></body></html>
