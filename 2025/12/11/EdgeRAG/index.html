@@ -1,0 +1,303 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>EdgeRAG | YoathI' Blog</title><meta name="author" content="YoathI"><meta name="copyright" content="YoathI"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="总结              对于边缘计算设备上的大语言模型，通过与RAG技术结合，可以利用本地个人数据来生成高质量生成。受限于边缘设备的内存和算力条件，本文提出了EdgeRAG，通过剪枝二级索引的嵌入向量并在检索过程中按照需生成嵌入向量，解决边缘设备上内存受限问题。从而使向量数据库适配有限移动内存的同时满足SLO需求，实现基于RAG的LLM移动化部署。        要点：存储高计算">
+<meta property="og:type" content="article">
+<meta property="og:title" content="EdgeRAG">
+<meta property="og:url" content="https://yoathi.github.io/2025/12/11/EdgeRAG/index.html">
+<meta property="og:site_name" content="YoathI' Blog">
+<meta property="og:description" content="总结              对于边缘计算设备上的大语言模型，通过与RAG技术结合，可以利用本地个人数据来生成高质量生成。受限于边缘设备的内存和算力条件，本文提出了EdgeRAG，通过剪枝二级索引的嵌入向量并在检索过程中按照需生成嵌入向量，解决边缘设备上内存受限问题。从而使向量数据库适配有限移动内存的同时满足SLO需求，实现基于RAG的LLM移动化部署。        要点：存储高计算">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yoathi.github.io/img/favicon.jpg">
+<meta property="article:published_time" content="2025-12-11T07:10:49.000Z">
+<meta property="article:modified_time" content="2025-12-27T04:27:24.138Z">
+<meta property="article:author" content="YoathI">
+<meta property="article:tag" content="ANNS">
+<meta property="article:tag" content="IVF索引">
+<meta property="article:tag" content="边缘设备">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yoathi.github.io/img/favicon.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "EdgeRAG",
+  "url": "https://yoathi.github.io/2025/12/11/EdgeRAG/",
+  "image": "https://yoathi.github.io/img/favicon.jpg",
+  "datePublished": "2025-12-11T07:10:49.000Z",
+  "dateModified": "2025-12-27T04:27:24.138Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YoathI",
+      "url": "https://YoathI.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.jpg"><link rel="canonical" href="https://yoathi.github.io/2025/12/11/EdgeRAG/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="preconnect" href="//busuanzi.ibruce.info"><link rel="stylesheet" href="/css/index.css?v=5.5.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.json","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'EdgeRAG',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="/css/modify.css"><link rel="stylesheet" href="/css/layout.css"><link rel="stylesheet" href="/css/icat.css"><meta name="generator" content="Hexo 8.1.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/favicon.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">14</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">11</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">YoathI' Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">EdgeRAG</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!--菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><!-- 搜索按钮--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">EdgeRAG</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-12-11T07:10:49.000Z" title="发表于 2025-12-11 15:10:49">2025-12-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-12-27T04:27:24.138Z" title="更新于 2025-12-27 12:27:24">2025-12-27</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E4%BD%8E%E8%B5%84%E6%BA%90%E8%AE%BE%E5%A4%87/">低资源设备</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">2.3k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>6分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div style="background:#f7f7f7; padding:10px 15px; border-left:4px solid #ccc; color:#666;">
+    <strong>总结</strong>
+    <p style="color:#888; font-size:0.9em; text-indent: 2em;">
+        对于边缘计算设备上的大语言模型，通过与RAG技术结合，可以利用本地个人数据来生成高质量生成。受限于边缘设备的内存和算力条件，本文提出了EdgeRAG，通过剪枝二级索引的嵌入向量并在检索过程中按照需生成嵌入向量，解决边缘设备上内存受限问题。从而使向量数据库适配有限移动内存的同时满足SLO需求，实现基于RAG的LLM移动化部署。
+    </p>
+</div>
+
+<p>要点：存储高计算成本簇的嵌入向量、检索过程中按需计算嵌入向量，缓存高复用、高计算成本簇的嵌入向量</p>
+<h1 id="研究背景和动机"><a href="#研究背景和动机" class="headerlink" title="研究背景和动机"></a>研究背景和动机</h1><p>在资源受限的边缘设备上部署RAG系统，需要解决向量相似性搜索的开销问题，包括向量存储和向量检索。Flat Index计算量过大且内存利用率低；IVF索引虽然能通过聚类减少搜素范围，但当索引过大而无法全部存储在内存时，频繁的数据交换会造成性能急剧下降。其次，本文通过实验分析发现，数据访问模式与访问延迟存在高度偏斜：首先，大多数嵌入向量在检索过程中未被访问；其次，不同簇的嵌入向量生成成本差异极大且呈长尾分布。</p>
+<h1 id="相关技术"><a href="#相关技术" class="headerlink" title="相关技术"></a>相关技术</h1><h2 id="Retrieval-Augmented-Generation"><a href="#Retrieval-Augmented-Generation" class="headerlink" title="Retrieval Augmented Generation"></a>Retrieval Augmented Generation</h2><p>RAG是一种通过将外部知识库与大型语言模型相结合来提高其准确性的技术，包括索引和查找过程。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251210222615241.png" alt="image-20251210222615241" style="zoom:67%;"></p>
+<center><strong>RAG流程图</strong></center>
+
+<p>索引过程：1、对数据数据进行预处理，将其分成由节点表示的较小重叠数据块；2、每个数据块经过一个嵌入模型，将其转化为高维向量表示；3、将嵌入向量存储在向量数据库以便后续检索。</p>
+<p>查找过程：1、查询向量通过相同嵌入模型生成查询向量；2、进行向量相似性搜索，查找最相似向量；3、系统返回与查询向量最接近的嵌入向量的索引；4、最后，系统检索到与最匹配索引相关的数据节点，并将这些信息输入到 LLM 中，生成用户所请求的响应。</p>
+<h2 id="Inverted-File-Index"><a href="#Inverted-File-Index" class="headerlink" title="Inverted File Index"></a>Inverted File Index</h2><p>IVF 索引采用聚类算法将相似文档分组至不同簇中。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251210225733137.png" alt="image-20251210225733137" style="zoom:67%;"></p>
+<center><strong>IVF索引的检索过程</strong></center>
+
+<p>检索流程：1、查询向量在首层索引中与各聚类中心进行比较；2、确定相关聚类后，在其二层索引中搜索最相似的嵌入向量；3、系统检索与该向量关联的数据，并将其返回给用户。</p>
+<h1 id="核心思想"><a href="#核心思想" class="headerlink" title="核心思想"></a>核心思想</h1><p>EdgeRAG 通过选择性索引存储来减少索引的内存占用，然后预计算并存储那些大簇嵌入来缓解生成这些嵌入的长尾延迟问题。为了进一步优化延迟，EdgeRAG 选择性地缓存生成的嵌入，以减少冗余计算并优化检索延迟。</p>
+<h2 id="Selective-Index-Storage"><a href="#Selective-Index-Storage" class="headerlink" title="Selective Index Storage"></a>Selective Index Storage</h2><p> 对 Second level Index 进行剪枝，会将嵌入生成从索引阶段转移到检索阶段，但如果生成延迟超过访问预计算嵌入，则会增加检索延迟。本文通过实验展示，大多数聚类的生成延迟低于500ms，但存在少量簇的生成延迟超过2s，呈现 tail-heavy 分布——少量聚类会对整体检索时间产生显著影响。</p>
+<p>为缓解大聚类中的长尾延迟问题， EdgeRAG 采用混合策略：在初始索引阶段，估算各聚类的嵌入生成延迟；识别出超出延迟阈值的聚类后，会预计算其嵌入并存储。查询时若存在预计算嵌入则直接从存储中获取，规避在线生成嵌入的高延迟阶段。对于未预计算的聚类，则实时生成嵌入。选择性索引存储算法如下：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251210234840380.png" alt="image-20251210234840380" style="zoom:67%;"></p>
+<center><strong>选择性索引存储算法</strong></center>
+
+<p>算法流程：1、对所有数据块进行嵌入处理，获取对应的嵌入向量；2、然后对嵌入向量进行聚类，生成聚类中心集合；3、对每个嵌入向量，把其分配到最近的簇中；4、估算每个簇的生成延迟，生成延迟=簇中数据块总长度/生成延迟；5、判断生成延迟是否大于SLO需求，若是，则预计算并存储该向量。</p>
+<h2 id="Adaptive-Cost-Aware-Caching"><a href="#Adaptive-Cost-Aware-Caching" class="headerlink" title="Adaptive Cost-Aware Caching"></a>Adaptive Cost-Aware Caching</h2><p>在检索阶段，对于较小、较常见的聚类的嵌入有频繁的复用，且被访问簇存在显著重叠。对此，EdgeRAG缓存已生成的嵌入以避免冗余计算。</p>
+<p>为优化缓存利用， EdgeRAG 采用自适应成本感知缓存策略，避免缓存那些生成延迟较低的较小簇的嵌入。缓存所有嵌入可能导致命中率低下和延迟增高，而仅缓存高成本嵌入虽可提升命中率却会增加整体延迟。为此，EdgeRAG 避免缓存生成延迟低于动态调整的最小延迟缓存阈值的聚类嵌入，从而平衡缓存命中率和整体延迟。缓存策略如下：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251211104059942.png" alt="image-20251211104059942" style="zoom:67%;"></p>
+<center><strong>成本感知缓存替换算法</strong></center>
+
+<p>算法流程：1、当收到缓存访问请求时，如果命中缓存，则对应簇的访问次数+1；2、否则，遍历缓存中每个簇，获取缓存中加权成本最小的簇，并从缓存中删除该簇。获取需访问簇的数据块并生成嵌入，然后将其放入内存；3、便利缓存中所有簇，对其counter进行衰减。</p>
+<p>对于缓存策略中缓存阈值的动态调整，算法如下：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251211103517800.png" alt="image-20251211103517800" style="zoom: 67%;"></p>
+<center><strong>最小延迟缓存阈值算法</strong></center>
+
+<p>算法流程：初始时，阈值设为 0，有效缓存所有簇嵌入向量。随后， EdgeRAG逐渐提高阈值，同时持续监控缓存命中率和检索延迟的移动平均。若发生缓存未命中且当前检索延迟低于移动平均值，则进一步增加阈值。反之，若未发生缓存未命中，则降低阈值。</p>
+<p style="color:#888; font-size:0.9em;">
+    <i>
+        自我理解：缓存miss且当前的检索延迟低于移动平均值，说明系统在处理未缓存的查询时的表现是优于过去的平均水平。因此，系统会进一步增加阈值，以优先缓存那些生成成本高的嵌入。
+    </i>
+</p>
+
+<h1 id="EdgeRAG-System"><a href="#EdgeRAG-System" class="headerlink" title="EdgeRAG System"></a>EdgeRAG System</h1><p>RAG索引基于传统的双层 IVF 索引结构：第一级索引常驻内存，存储聚类中心点及指向第二级索引的引用；第二级索引存储文本块的引用以及所有数据块的嵌入生成延迟。EdgeRAG通过剪枝处理，仅存储高计算成本簇的嵌入，其他簇的嵌入在检索过程中按需实时生成。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251211135149222.png" alt="image-20251211135149222"></p>
+<center><strong>EdgeRAG索引流程</strong></center>
+
+<p><strong>索引构建流程：</strong>1、将整个文本分割较小的数据块；2、对每个数据块生成对应嵌入；3、对生成的嵌入进行聚类；4、将每个簇的聚类中心存储在第一层索引；5、将相关数据块分配给各自所属的簇；6、存储对相应数据块的引用；7、与传统IVF不同，EdgeRAG会计算生成每个数据块嵌入的计算成本。如果这种成本超过预先设定的阈值（服务水平目标，SLO），那么将完整存储该数据块的所有嵌入；否则，舍弃该嵌入以优化存储。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251211144556700.png" alt="image-20251211144556700"></p>
+<center><strong>EdgeRAG检索流程</strong></center>
+
+<p><strong>向量检索流程：</strong>1、首先查找与查询嵌入最相似的簇；2、随后检测该集群是否存在预计算嵌入；3、若存在，则直接检索存储的嵌入，并加载这些嵌入；4、否则，系统会查询嵌入缓存；5、若缓存命中，则从缓存加载嵌入并检索关联数据块；若未命中，则检索集群内所有关联数据块，重新生成嵌入并更新缓存，随后完成嵌入加载；6、最终系统查找最匹配的嵌入并检索对应数据块</p>
+<p><strong>插入操作：</strong></p>
+<ul>
+<li>将新的数据块的嵌入向量添加到最相似的簇中。</li>
+<li>如果添加后该簇的嵌入生成延迟超过 SLO，则重新生成并存储该簇中所有数据块的嵌入向量。</li>
+</ul>
+<p>当某个簇变得过大时，系统会将其拆分为多个较小簇，并将新生成的簇添加至一级索引中 。</p>
+<p><strong>删除操作：</strong></p>
+<ul>
+<li>从其所属的簇中移除要删除的数据块的嵌入向量，并更新簇索引。</li>
+<li>如果移除后该簇的嵌入生成延迟低于 SLO，则可以删除该簇中所有数据块的嵌入向量。</li>
+</ul>
+<p>簇规模过小时，可能会与相邻簇进行合并。此删除过程可异步执行，因为暂时保留小规模簇不会对检索延迟产生即时负面影响  </p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://YoathI.github.io">YoathI</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://yoathi.github.io/2025/12/11/EdgeRAG/">https://yoathi.github.io/2025/12/11/EdgeRAG/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://YoathI.github.io" target="_blank">YoathI' Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/ANNS/">ANNS</a><a class="post-meta__tags" href="/tags/%E8%BE%B9%E7%BC%98%E8%AE%BE%E5%A4%87/">边缘设备</a><a class="post-meta__tags" href="/tags/IVF%E7%B4%A2%E5%BC%95/">IVF索引</a></div><div class="post-share"><div class="social-share" data-image="/img/favicon.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer=""></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2025/12/11/Manu/" title="Manu"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">Manu</div></div><div class="info-2"><div class="info-item-1">要点：系统架构、可协调一致性、功能分层解耦、日志即数据、发布/订阅模式、索引构建和向量查询、硬件优化、系统恢复 Maun介绍Manu是Zilliz团队提出的下一代云原生向量数据库系统架构，是对Milvus的架构演进与理念升级。Manu作为Milvus在云原生体系下的演进而设计，Milvus在2.0版本以后逐步实现Manu提出的架构功能。  Manu使用“日志即数据”的设计理念，将整个系统构建为一组日志发布/订阅微服务，即Pub/sub服务模式。 设计目标：持续演进能力、可调一致性、良好的弹性、高性能以及高可用性。 设计理念：放松事务复杂性以换取可调一致性和细颗粒度弹性。  系统实现数据库设计Schema：模式是定义数据类型和数据属性的元信息。  模式示例：ID+feature vector+label+numerical attribute+LSN(logical sequence number) label：用于标识实体的类别，如食物、书籍等。 LSH：逻辑序列号，对用户隐藏的系统字段。   Schema示例  Collection：与关系数据库的table类似，用来存储向量和...</div></div></div></a><a class="pagination-related" href="/2025/11/27/Starling/" title="Starling"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Starling</div></div><div class="info-2"><div class="info-item-1">     总结              本文提出一种面向数据段高维向量相似性搜索的I/O高效磁盘驻留图索引框架，该框架通过优化数据布局和搜索策略，在不增加额外空间开销的前提下提升搜索性能。（在存储空间与内存空间限制的条件下，实现高搜索精度与效率。）         研究背景相对于单机维护大型向量索引，主流向量数据库更倾向于数据分片，将大规模数据分区为多个段，并为单机分配适量数据段。每个段在受限存储容量和计算资源下运行，并在各段构建中型索引以实现自主搜索。通过特定数据分片策略与查询协调器，可在向量查询执行时仅搜索机器的少数数据段。但是现有工作未能兼顾搜索性能与空间成本以在数据段上实现有效的高维度向量相似性搜索（HVSS），而是直接应用基于磁盘的方法来处理大规模数据。 研究现状现有的基于磁盘的HVSS方法在数据布局和搜索策略仍然遵循基于内存解决方案的范式，导致大量磁盘I/O，限制了给定空间成本下的搜索性能。以DiskANN为例：搜索路径过长，搜索过程中每一跳对应一次I/O请求，造成大量磁盘I/O，导致高搜索延迟；数据局部性差，搜索过程中的I/O仅单个节点为有效数据，从磁盘读取的数据...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2025/11/11/SPANN/" title="SPANN"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-11-11</div><div class="info-item-2">SPANN</div></div><div class="info-2"><div class="info-item-1">研究背景目前针对超大规模向量检索场景的混合ANNS方案，如DiskANN、HM-ANN，都是基于图的解决方案。本文论证了简单倒排索引方法同样能在大规模数据集上实现召回率、延迟与内存成本的顶尖性能。 SPANN概述不同于以往基于倒排索引且依赖有损数据压缩来降低内存开销的方法，SPANN采用了一种简洁的内存-磁盘混合方案。 索引结构：数据向量X被划分为N 个倒排列表${\mathbf{X}_1,\mathbf{X}_2,\cdots,\mathbf{X}_N}$，$\mathrm{X}_1\mathrm{X}_2\cup…\cup\mathrm{X}_N=\mathrm{X}^3$。这些倒排列表的质心$\mathbf{c}_1,\mathbf{c}_2,\cdots,\mathbf{c}_N$存储在内存中作为快速粗粒度索引，指向磁盘中对应倒排列表的位置。  局部检索：当查询向量q到来时，我们寻找K个最近邻质心\{c_{i1}, c_{i2}, \ldots, c_{iK}\}, K \ll N，并将这K个最近质心对应的倒排列表X_{i_1}, X_{i_2}, \cdots, X_{...</div></div></div></a><a class="pagination-related" href="/2025/10/31/DiskANN/" title="DiskANN论文阅读笔记"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/DiskANN-cover.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-10-31</div><div class="info-item-2">DiskANN论文阅读笔记</div></div><div class="info-2"><div class="info-item-1">DiskANN是面向SSD的十亿规模高效向量检索方案，其目标就是在单台机器上，使用有限的内存，实现对十亿级数据集的快速、高精度的最近邻搜索。 研究现状当前最先进的近似最相邻算法为了保证快速的高召回率，其产生的索引必须存储在内存中。但对于大规模高维数量集，单台服务器的内存容量会成为算法瓶颈，而使用分布式服务器对索引进行存储也会造成额外的磁盘访问开销和扩展成本较高。对于这些针对内存所设计的向量检索算法，如果将算法所构建的索引存储在SSD或采用混合模式会使得其实现比较复杂，还会造成搜索性能较差（搜索延迟灾难性上升和吞吐量急剧下降）。因此，如何突破内存容量的限制，实现既能处理海量数据又能保持低延迟的“磁盘友好型”向量搜索算法显得十分重要。 具体技术本文介绍了一种新型的基于图的索引构建算法Vamana，以及DiskANN整体系统的设计。 Vamana算法Vamana算法通过图结构优化减少磁盘访问次数。 Vamana算法使用GreedySearch算法和RobustProne算法进行图的构建，所构建的图为有向图。GreedySearch算法为节点选取出边邻居，RobustProne算法通过剪...</div></div></div></a><a class="pagination-related" href="/2025/12/23/AiSAQ/" title="AiSAQ"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-12-23</div><div class="info-item-2">AiSAQ</div></div><div class="info-2"><div class="info-item-1">     总结              DiskANN 采用乘积量化技术以降低内存占用，但其内存开销仍与数据集规模成正比。基于该问题，本文提出了一种基于乘积量化的全存储式近似最近邻搜索方法 AiSAQ，将压缩后的向量完全卸载至 SSD 索引中。在十亿级规模的数据集上，AiSAQ 在查询阶段的内存占用仅约 10 MB，且未引入显著的查询延迟性能退化。此外，AiSAQ 显著降低了查询准备阶段的索引加载时间，从而支持在多个十亿级索引之间进行快速切换。         在近年来大语言模型LLM的发展趋势中，检索增强生成RAG被广泛用于利用外部知识源生成更准确的回答。在某些场景下，RAG 流水线需要同时接入多个外部知识源，此时检索器需要在不同索引之间进行“切换”。这一过程要求在服务期间将所有数据源的索引常驻于内存中，或在每次请求时从外部存储中加载索引数据，从而带来较高的内存开销或显著的加载延迟。 Drawbacks of DiskANN在 DiskANN 中，PQ 压缩向量存储在 DRAM 中，用于决定搜索路径；而完整精度向量以及节点$vi$的出邻居集合$N{\mathrm{out}}(...</div></div></div></a><a class="pagination-related" href="/2025/12/25/LM-DiskANN/" title="LM-DiskANN"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-12-25</div><div class="info-item-2">LM-DiskANN</div></div><div class="info-2"><div class="info-item-1">     总结              现有的基于图的ANN算法，如DiskANN，每个图节点包含的路由决策信息不完整，需要将其所有邻居的向量加载到内存中，过程中会产生大量I/O操作。基于此，本文提出了LM-DiskANN，其中每个节点存储完整的邻居信息用于路由，搜索期间的总I/O次数将与DiskANN相似，但内存占用要低得多。         LM-DiskANN节点布局对于每个节点，与DiskANN相比，LM-DiskANN在邻居ID之后立即存储所有邻居的压缩向量，如图所示。  LM-DiskANN 磁盘节点的存储结构  每个节点以其ID开始,然后是其向量,然后是所有邻居的ID。如果邻居数量少于最大邻居数量,剩余空间用0填充。每个节点以邻居的压缩向量结束,如果邻居数量少于最大邻居数量,后面也跟随填充。 通过最大邻居数量控制，可以使得每个节点可以放入单个4KB页面中，与DIskANN相比，加载节点并不需要更多的I/O操作。 LM-SearchVamana 采用了经典的BFS算法，LM-DiakANN的搜索算法构建在Vamana之上，同样使用 BFS 搜索策略。二者的主要区别在...</div></div></div></a><a class="pagination-related" href="/2025/10/31/LEANN/" title="LEANN论文阅读笔记"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/LEANN-cover.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-10-31</div><div class="info-item-2">LEANN论文阅读笔记</div></div><div class="info-2"><div class="info-item-1">针对ANN向量索引存储开销大而无法部署在资源受限的边缘设备上的问题，该论文针对该问题提出了一种低存储的ANN向量检索策略——LEANN，LEANN通过不存储全部原始向量而在查询时对必要节点重新计算其向量表示的思想，使用即时重计算机制、两级遍历算法和高度数节点保留的剪枝算法等方法，在保证较高召回率和可容忍延迟的前提下，大幅度降低了向量检索在边缘设备上的存储开销。 研究背景目前基于嵌入的搜索（向量检索技术）已经被广泛应用在推荐系统和RAG中，个人设备对此也逐渐突显需求。但由于个人设备存储空间限制和ANN索引存储开销过大的原因，无法在个人设备中存储必要的索引结构。因此，减少索引存储开销和保持搜索质量和延迟成为了关键问题。 行业需求随着智能手机等边缘设备越来越普及，这些设备不断采集并生成多模态数据（如图像、文字、音频等）。这些数据如果能被有效地检索、组合起来，对用户回忆、检索过去信息、辅助智能应用等都有潜在价值。 边缘设备上向量检索的应用：设备端RAG系统、个性化推荐系统、图像与视频内容检索等。 研究动机 动态重算嵌入以节省存储：  传统图索引（如 HNSW）在查询时只会访问少量向量，因...</div></div></div></a><a class="pagination-related" href="/2025/11/16/HM-ANN/" title="HM-ANN"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-11-16</div><div class="info-item-2">HM-ANN</div></div><div class="info-2"><div class="info-item-1">     总结              本文基于异构内存（由PMem和DRAM组成）提出HM-ANN向量检索策略，综合考虑内存与数据的异构性，在无需压缩的情况下实现了单节点上的十亿级别的相似性检索。                   具体技术：1、改进HNSW算法，引入自上而下插入和自下而上提升阶段：对于HNSW算法构建最底层进行保留并置于慢速内存中；从底层图中提升枢纽节点形成上层图结构并置于快速内存；2、通过动态迁移等内存管理技术，实现从慢速内存预取待访问数据到快速内存，并通过并行搜索降低慢速内存中的搜索耗时；3、建立性能模型以根据搜索时间与召回率约束自动选择超参数。         研究背景因内存容量限制，ANNS算法的设计需要平衡精度与效率。现有的基于SSD的解决方案会大大增加I/O操作时间。异构内存可以大幅度增加内存容量，以便ANNS算法同时兼顾精度和效率，为ANNS算法的设计提供了新机遇。 异构内存 异构内存HM由高容量内存技术和高性能内存技术构成：  高容量内存：如NVM、SSD，容量大但访问延迟高。 高性能内存：如DRAM、HBM，容量小但访问延迟低。  具体技...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%A0%94%E7%A9%B6%E8%83%8C%E6%99%AF%E5%92%8C%E5%8A%A8%E6%9C%BA"><span class="toc-number">1.</span> <span class="toc-text">研究背景和动机</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%9B%B8%E5%85%B3%E6%8A%80%E6%9C%AF"><span class="toc-number">2.</span> <span class="toc-text">相关技术</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Retrieval-Augmented-Generation"><span class="toc-number">2.1.</span> <span class="toc-text">Retrieval Augmented Generation</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Inverted-File-Index"><span class="toc-number">2.2.</span> <span class="toc-text">Inverted File Index</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%A0%B8%E5%BF%83%E6%80%9D%E6%83%B3"><span class="toc-number">3.</span> <span class="toc-text">核心思想</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Selective-Index-Storage"><span class="toc-number">3.1.</span> <span class="toc-text">Selective Index Storage</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Adaptive-Cost-Aware-Caching"><span class="toc-number">3.2.</span> <span class="toc-text">Adaptive Cost-Aware Caching</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#EdgeRAG-System"><span class="toc-number">4.</span> <span class="toc-text">EdgeRAG System</span></a></li></ol></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">©&nbsp;2025 By YoathI</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.1"></script><script src="/js/main.js?v=5.5.1"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'ams',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zindex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async="" data-pjax="" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词…" type="text"></div><hr><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.1"></script></div></div></body></html>

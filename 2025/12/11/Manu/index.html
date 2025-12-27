@@ -1,0 +1,307 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Manu | YoathI' Blog</title><meta name="author" content="YoathI"><meta name="copyright" content="YoathI"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="要点：系统架构、可协调一致性、功能分层解耦、日志即数据、发布/订阅模式、索引构建和向量查询、硬件优化、系统恢复 Maun介绍Manu是Zilliz团队提出的下一代云原生向量数据库系统架构，是对Milvus的架构演进与理念升级。Manu作为Milvus在云原生体系下的演进而设计，Milvus在2.0版本以后逐步实现Manu提出的架构功能。  Manu使用“日志即数据”的设计理念，将整个系统构建为一组">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Manu">
+<meta property="og:url" content="https://yoathi.github.io/2025/12/11/Manu/index.html">
+<meta property="og:site_name" content="YoathI' Blog">
+<meta property="og:description" content="要点：系统架构、可协调一致性、功能分层解耦、日志即数据、发布/订阅模式、索引构建和向量查询、硬件优化、系统恢复 Maun介绍Manu是Zilliz团队提出的下一代云原生向量数据库系统架构，是对Milvus的架构演进与理念升级。Manu作为Milvus在云原生体系下的演进而设计，Milvus在2.0版本以后逐步实现Manu提出的架构功能。  Manu使用“日志即数据”的设计理念，将整个系统构建为一组">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yoathi.github.io/img/favicon.jpg">
+<meta property="article:published_time" content="2025-12-11T08:32:12.000Z">
+<meta property="article:modified_time" content="2025-12-27T04:05:50.406Z">
+<meta property="article:author" content="YoathI">
+<meta property="article:tag" content="向量数据库设计">
+<meta property="article:tag" content="异构计算">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yoathi.github.io/img/favicon.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Manu",
+  "url": "https://yoathi.github.io/2025/12/11/Manu/",
+  "image": "https://yoathi.github.io/img/favicon.jpg",
+  "datePublished": "2025-12-11T08:32:12.000Z",
+  "dateModified": "2025-12-27T04:05:50.406Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YoathI",
+      "url": "https://YoathI.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.jpg"><link rel="canonical" href="https://yoathi.github.io/2025/12/11/Manu/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="preconnect" href="//busuanzi.ibruce.info"><link rel="stylesheet" href="/css/index.css?v=5.5.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.json","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Manu',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="/css/modify.css"><link rel="stylesheet" href="/css/layout.css"><link rel="stylesheet" href="/css/icat.css"><meta name="generator" content="Hexo 8.1.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/favicon.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">14</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">11</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">YoathI' Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Manu</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!--菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><!-- 搜索按钮--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Manu</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-12-11T08:32:12.000Z" title="发表于 2025-12-11 16:32:12">2025-12-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-12-27T04:05:50.406Z" title="更新于 2025-12-27 12:05:50">2025-12-27</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%90%91%E9%87%8F%E6%95%B0%E6%8D%AE%E5%BA%93/">向量数据库</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">3.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>10分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>要点：系统架构、可协调一致性、功能分层解耦、日志即数据、发布/订阅模式、索引构建和向量查询、硬件优化、系统恢复</p>
+<h1 id="Maun介绍"><a href="#Maun介绍" class="headerlink" title="Maun介绍"></a>Maun介绍</h1><p>Manu是Zilliz团队提出的下一代云原生向量数据库系统架构，是对Milvus的架构演进与理念升级。Manu作为Milvus在云原生体系下的演进而设计，Milvus在2.0版本以后逐步实现Manu提出的架构功能。</p>
+<ul>
+<li>Manu使用“日志即数据”的设计理念，将整个系统构建为一组日志发布/订阅微服务，即Pub/sub服务模式。</li>
+<li><strong>设计目标：持续演进能力、可调一致性、良好的弹性、高性能以及高可用性。</strong></li>
+<li>设计理念：放松事务复杂性以换取可调一致性和细颗粒度弹性。</li>
+</ul>
+<h1 id="系统实现"><a href="#系统实现" class="headerlink" title="系统实现"></a>系统实现</h1><h2 id="数据库设计"><a href="#数据库设计" class="headerlink" title="数据库设计"></a>数据库设计</h2><p><strong>Schema</strong>：模式是定义数据类型和数据属性的元信息。</p>
+<blockquote>
+<p>模式示例：ID+feature vector+label+numerical attribute+LSN(logical sequence number)</p>
+<p>label：用于标识实体的类别，如食物、书籍等。</p>
+<p>LSH：逻辑序列号，对用户隐藏的系统字段。</p>
+</blockquote>
+<p><img src="../AppData/Roaming/Typora/typora-user-images/image-20251211163309472.png" alt="image-20251211163309472"></p>
+<center><strong>Schema示例</strong></center>
+
+<p><strong>Collection</strong>：与关系数据库的table类似，用来存储向量和相关元数据。Collection之间没有相关性，不能进行连接等关系代数操作。</p>
+<p><strong>Shard</strong>：分片对应于插入/删除通道。在执行插入/删除操作时，系统根据实体的主键对其进行哈希，将其分配到相应的分片中。Shard并不存储数据，而是使用segment进行数据的存储</p>
+<p><strong>Segment</strong>：段是一个自动创建的数据文件，用于存储插入的数据。一个 Collections 可能包含多个分段，每个分段可以容纳许多实体。</p>
+<blockquote>
+<p>Collection——Shard：一对多<br>Shard——Segement：一对多</p>
+</blockquote>
+<h1 id="系统架构"><a href="#系统架构" class="headerlink" title="系统架构"></a>系统架构</h1><p>采用面向服务设计，从上到下依次分为<strong>访问层、协调层、工作层和存储层</strong>。</p>
+<p><img src="../AppData/Roaming/Typora/typora-user-images/image-20251211163421426.png" alt="image-20251211163421426" style="zoom: 67%;"></p>
+<center><strong>Manu架构</strong></center>
+
+<p><strong>Access Layer：</strong>Access layer访问层由若干个无状态的 proxy 组成。这些 proxy 负责接收用户请求，将处理过的请求转发给系统内的相关组件进行处理，并将处理结果收集整理好之后返回给用户。</p>
+<p><strong>Coordinator layer：</strong>负责管理系统状态，维护系统元数据以及协调各个功能组件来完成系统中的各类任务。</p>
+<blockquote>
+<p>Root coordinator：处理数据定义请求（如创建和删除集合），并维护collections的元数据。</p>
+<p>Data coordinator：记录collections的详细信息（如segments的存储路径），并借条数据节点将更新请求转为linlogs。</p>
+<p>Query coordinator：管理数据节点状态，调节segments（及其相关索引）到查询节点的分配以实现负载均衡。</p>
+<p>Index coordinator：维护索引的元信息（如索引类型和存储路径），并协调索引节点的索引构建工作。</p>
+</blockquote>
+<p><strong>Worker layer：</strong>负责真正的执行系统中各类任务，包括<strong>query node、data node和index node</strong>。query node用于查询处理、index node用于索引构建、data node用于日志归档。</p>
+<p><strong>Storage layer：</strong>持久化系统状态、元数据、集合以及相关索引数据。</p>
+<blockquote>
+<p>Manu 使用高可用的分布式 KV 系统（如 etcd）来记录系统状态和元数据。对于用户数据和索引数据等规模较大的数据，Manu 采用对象存储服务（如 S3）进行管理。</p>
+</blockquote>
+<h2 id="日志系统"><a href="#日志系统" class="headerlink" title="日志系统"></a>日志系统</h2><p>Manu将所有修改系统状态的请求记录到日志中。logger作为将数据发布到WAL的入口点。</p>
+<p><img src="../AppData/Roaming/Typora/typora-user-images/image-20251211163619484.png" alt="image-20251211163619484"></p>
+<center><strong>Manu日志系统的详细结构</strong></center>
+
+<p><strong>具体流程：</strong>对于实体插入操作，系统首先通过访问层（Access Layer）的代理接收插入请求，并对实体进行合法性验证。然后，系统使用一致性哈希算法计算实体ID所对应的逻辑桶（Logical Bucket），从而确定该实体所属的分片（Shard），并将请求分配给负责该分片的Logger。Logger向时间戳服务（TSO）获取该实体的全局日志序列号（LSN），以确保系统内写入顺序一致。接着，Logger决定该实体应存放的 Segment，并将该实体与Segment的对应关系写入本地LSM树中。LSM树的增量数据会周期性地刷新（flush）到对象存储中，以SSTable（RocksDB格式）的形式持久化保存实体–segment 的映射。同时，Logger将实体写入其负责的WAL通道（Write-Ahead Log Channel）并发布。数据节点（Data Node）订阅相应的WAL通道，默认周期读取日志数据，并将行式（row-based）的WAL记录转换为列式（column-based）存储的binlog文件，以便后续索引与查询模块使用。  </p>
+<blockquote>
+<p>每个logger将自己管理的shard中数据segment映射关系对应的SSTable从对象存储中缓存到本地。</p>
+<p>WAL基于云的消息队列实现。数据定义和系统协调信息使用自己的channel，数据操作请求被哈希到多个通道增加吞吐量。数据节点订阅WAL，并将基于行的日志转换为基于列的binlog。WAL中相同属性的值在binlog中以列的形式保存。索引节点只需从binlog中读取需要构建索引的列数据，减少了读放大。</p>
+</blockquote>
+<p>Manu组件之间消息也是通过日志进行传递的。当segment被写入存储时数据节点将事件写入日志，当索引构建完成时索引节点将事件写入日志。</p>
+<h2 id="可协调一致性"><a href="#可协调一致性" class="headerlink" title="可协调一致性"></a>可协调一致性</h2><p>Manu采用<strong>delta一致性模型</strong>来权衡性能和一致性，保证查询所看到的数据陈旧程度是有界的。</p>
+<p>Manu的每个时间戳包括物理时间戳和逻辑时间戳两部分。物理时间戳为请求被Manu接收到的物理时间；逻辑时间戳用于区分在同一物理时间内发生的多个事件。</p>
+<p>Manu使用time-tick机制来表示系统数据同步进度（整个系统中数据处理或事件发生的进度）。</p>
+<p>对于日志订阅者（如查询节点），若实现delta一致性模型，需要获取1.用户定义的可容忍陈旧程度τ（dalta值）；2.最近一次数据更新时间（最近一次系统同步的时间）；3.当前查询请求的发起时间。设日志通道最近的time-tick为Ls，查询请求发起时间为Lr，若Lr-Ls&lt;τ不满足（即数据之后超过用户设定的容忍时间），查询节点会等待下一个 time-tick，再执行查询，以保证数据“新鲜度”符合要求。</p>
+<h2 id="索引构建"><a href="#索引构建" class="headerlink" title="索引构建"></a>索引构建</h2><p>Manu支持批量索引和流式索引构建两种方式。当用户为整个collection构建索引时使用批量索引；当用户连续插入新实体时使用流式索引，并且索引在不停止搜索服务的情况下异步构建。</p>
+<ul>
+<li>批量索引构建：当用户为整个collection创建索引，index调度器从数据节点获取集合内所有segment的路径，并通知索引节点为每个segment构建索引。</li>
+<li>流式索引构建：用户持续性的插入新数据，索引以异步方式构建，不会阻碍搜索服务。具体来讲，当segment接收新数据并到达指定大小，其所在的数据节点将此segment变为sealed状态并作为binlog写入对象存储。此后，数据调度器通知索引调度器，索引调度器通知索引节点对此segment构建索引。索引节点从对象存储中读取索引构建需要的列并构建索引。对于数据删除，Manu使用位图记录删除的向量，并在删除数据量达到一定阈值后重新为segment构建索引。</li>
+<li>对于批式索引构建和流式索引构建，当索引构建完成后，索引节点将索引文件持久化到对象存储，并将索引文件路径发送到索引调度器。索引调度器会通知查询调度器以便查询节点可以加载向量查询需要的索引文件。Manu也会在适当的时候在多个segment之上构建联合索引。</li>
+</ul>
+<h2 id="向量搜索"><a href="#向量搜索" class="headerlink" title="向量搜索"></a>向量搜索</h2><p>和Milvus一样，Manu支持经典向量搜索、属性过滤和多向量搜索。</p>
+<p>为了并行的处理数据查询请求，Manu 将数据集中的数据划分成固定大小的数据分片，并将这些数据分片放置在不同的 query node 上。</p>
+<p>查询节点从WAL、索引文件和binlog来获取数据。查询节点订阅WAL来获取新插入的实体数据，但对于新增实体进行暴力全量搜索代价较大，为解决该问题，将每个segment划分为多个slice，并对slice构建轻量临时索引（如IVF-FLAT）。当segment由growing转化为sealed时，会使用索引节点对其构建索引来替代临时索引。查询节点会在segment分布发生变化时，从binlog中访问数据，这种变化可能出现在系统伸缩、负载均衡、查询节点故障与恢复等场景。</p>
+<blockquote>
+<p>对于向量搜索，Manu将一个集合划分成多个segments并将segments分散到多个查询节点并行查询。代理proxy通过询问查询调度器获取查询节点上的segments分布，并将查询请求发送到持有对应segment的查询节点。查询节点在本地执行两阶段查询，对于top-k查询，查询节点首先获得segment粒度的top-k结果，然后内部汇总得到query节点粒度的top-k结果。然后代理proxy将收集多个节点粒度的top-k结果进行合并，返回给应用程序。对于删除操作，查询节点使用位图记录每个segment中删除的数据并从segment粒度的top-k结果中去除已被标记删除的数据。Manu也支持批量向量查询，当之前的批查询请求结果尚未返回时，查询节点在cache中对当前批查询请求进行归类，将对相同集合，使用相同相似性函数的查询请求组织为一个批次，提高处理效率。</p>
+<p>查询节点获取数据的渠道有三个：WAL、索引文件、binlog。对于growing segment中的数据，查询节点订阅WAL并以扫描的方式进行搜索。大segment有利于已经创建索引的数据查询，但是growing segment中的数据查询代价高。为了实现权衡，Manu将segment内部又划分为多个slices（默认包含1w个向量）。新数据被顺序插入到slice中，slice满了之后将构建轻量化索引（如IVF-FLAT）。当segment写满，构建好索引并存储到对象存储中后，索引节点被通知将索引加载到内存替换slice的临时索引。当查询节点间的segment分布因为系统节点scale、负载均衡、查询节点故障重启等发生改变后，查询节点需要访问binlog。如果查询节点故障，其负责的segment和对应的索引将被加载到其他索引节点。</p>
+</blockquote>
+<h1 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h1><h2 id="LSH算法和多哈希表策略"><a href="#LSH算法和多哈希表策略" class="headerlink" title="LSH算法和多哈希表策略"></a>LSH算法和多哈希表策略</h2><p>在 LSH 中，<strong>单哈希表策略</strong>是指选取 kkk 个独立的局部敏感哈希函数，将它们组合用于同一个哈希表中。对于每个向量，通过这 kkk 个哈希函数生成一个 kkk-维哈希码（或称哈希标签），并根据该哈希码确定该向量所属的桶（Bucket），再将向量的标识符插入对应桶中。使用多个哈希函数的目的是降低不同向量发生哈希碰撞的概率，使得仅当向量高度相似时才更可能落入同一桶内。</p>
+<p>然而，仅使用单哈希表会存在“边界效应”问题，即某些相似向量可能因映射边界差异而被分到不同桶中，从而降低召回率。因此，LSH 引入了<strong>多哈希表策略</strong>：为每一个哈希表分别选取一组新的 k 个哈希函数，并建立多个独立的哈希表。对于每个向量，将上述过程在所有哈希表上重复执行，使得向量被插入多个桶中。多哈希表机制提升了相似向量在至少一张表中被映射到同一桶的概率，从而有效改善查全率（Recall）。</p>
+<p>对于多哈希表的向量检索，对查询向量，对于每一个哈希表，使用该表的k个哈希函数计算哈希签名，找到对应的桶编号。然后从对应的桶中取出候选向量进行相似度计算，得到候选结果。最后，对于所有的候选结果进行合并去重，得到最终的最近邻查询结果。</p>
+<h2 id="聚类边界问题"><a href="#聚类边界问题" class="headerlink" title="聚类边界问题"></a>聚类边界问题</h2><p>k-means 聚类是<strong>基于全局分布的划分</strong>，但查询是<strong>局部相似性判断</strong>。这样会导致两个相似的向量在与聚类中心进行距离计算后，被分配到不同的桶（聚类簇）中。而查询的粗过滤又是通过查询向量与聚类中心进行距离比较，从而导致可能漏掉一些潜在的近邻向量，造成低召回率。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://YoathI.github.io">YoathI</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://yoathi.github.io/2025/12/11/Manu/">https://yoathi.github.io/2025/12/11/Manu/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://YoathI.github.io" target="_blank">YoathI' Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%BC%82%E6%9E%84%E8%AE%A1%E7%AE%97/">异构计算</a><a class="post-meta__tags" href="/tags/%E5%90%91%E9%87%8F%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1/">向量数据库设计</a></div><div class="post-share"><div class="social-share" data-image="/img/favicon.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer=""></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2025/12/23/AiSAQ/" title="AiSAQ"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">AiSAQ</div></div><div class="info-2"><div class="info-item-1">     总结              DiskANN 采用乘积量化技术以降低内存占用，但其内存开销仍与数据集规模成正比。基于该问题，本文提出了一种基于乘积量化的全存储式近似最近邻搜索方法 AiSAQ，将压缩后的向量完全卸载至 SSD 索引中。在十亿级规模的数据集上，AiSAQ 在查询阶段的内存占用仅约 10 MB，且未引入显著的查询延迟性能退化。此外，AiSAQ 显著降低了查询准备阶段的索引加载时间，从而支持在多个十亿级索引之间进行快速切换。         在近年来大语言模型LLM的发展趋势中，检索增强生成RAG被广泛用于利用外部知识源生成更准确的回答。在某些场景下，RAG 流水线需要同时接入多个外部知识源，此时检索器需要在不同索引之间进行“切换”。这一过程要求在服务期间将所有数据源的索引常驻于内存中，或在每次请求时从外部存储中加载索引数据，从而带来较高的内存开销或显著的加载延迟。 Drawbacks of DiskANN在 DiskANN 中，PQ 压缩向量存储在 DRAM 中，用于决定搜索路径；而完整精度向量以及节点$vi$的出邻居集合$N{\mathrm{out}}(...</div></div></div></a><a class="pagination-related" href="/2025/12/11/EdgeRAG/" title="EdgeRAG"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">EdgeRAG</div></div><div class="info-2"><div class="info-item-1">     总结              对于边缘计算设备上的大语言模型，通过与RAG技术结合，可以利用本地个人数据来生成高质量生成。受限于边缘设备的内存和算力条件，本文提出了EdgeRAG，通过剪枝二级索引的嵌入向量并在检索过程中按照需生成嵌入向量，解决边缘设备上内存受限问题。从而使向量数据库适配有限移动内存的同时满足SLO需求，实现基于RAG的LLM移动化部署。        要点：存储高计算成本簇的嵌入向量、检索过程中按需计算嵌入向量，缓存高复用、高计算成本簇的嵌入向量 研究背景和动机在资源受限的边缘设备上部署RAG系统，需要解决向量相似性搜索的开销问题，包括向量存储和向量检索。Flat Index计算量过大且内存利用率低；IVF索引虽然能通过聚类减少搜素范围，但当索引过大而无法全部存储在内存时，频繁的数据交换会造成性能急剧下降。其次，本文通过实验分析发现，数据访问模式与访问延迟存在高度偏斜：首先，大多数嵌入向量在检索过程中未被访问；其次，不同簇的嵌入向量生成成本差异极大且呈长尾分布。 相关技术Retrieval Augmented GenerationRAG是一种通过将外...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2025/11/04/Milvus/" title="Milvus"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/Milvus_cover.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-11-04</div><div class="info-item-2">Milvus</div></div><div class="info-2"><div class="info-item-1">研究背景及现状对于非结构化数据，通常可以通过向量化表示（embedding）进行存储和检索。但随着数据科学和人工智能的快速发展，大规模高维向量激增。传统数据库主要处理结构化或基于倒排索引的文本检索，在高维向量检索方面性能不足；现有的Annoy等相似性搜索库更偏向于单机库，难以支撑企业级的大规模分布式向量和动态向量检索需求，并且它们能提供的功能有限，无法满足通用应用的要求，（缺乏数据库级的管理能力）如缺乏实时、高效的增删改能力和元数据过滤能力（元数据指的是与指的是和向量一起存储的、用于描述该向量的额外信息）。 行业需求对于不同行业，需要设计一种通用的专门用向量数据的数据库系统，来支持对大规模向量数据进行快速查询处理和对动态向量数据插入、删除等操作。除了简单的向量相似性搜索，还需要如属性过滤、多向量查询等的高级查询处理。 研究动机现有的针对向量数据管理的算法和系统主要集中于向量相似性搜索，但由于在大规模和动态向量数据上性能很差且功能有限，因此无法满足如属性过滤和多向量查询等行业需求。Milvus作为专为向量计算设计的开源数据管理系统应运而生，通过优化近似最近邻搜索、支持异构硬件加速、...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Maun%E4%BB%8B%E7%BB%8D"><span class="toc-number">1.</span> <span class="toc-text">Maun介绍</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%B3%BB%E7%BB%9F%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.</span> <span class="toc-text">系统实现</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1"><span class="toc-number">2.1.</span> <span class="toc-text">数据库设计</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84"><span class="toc-number">3.</span> <span class="toc-text">系统架构</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F"><span class="toc-number">3.1.</span> <span class="toc-text">日志系统</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%AF%E5%8D%8F%E8%B0%83%E4%B8%80%E8%87%B4%E6%80%A7"><span class="toc-number">3.2.</span> <span class="toc-text">可协调一致性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B4%A2%E5%BC%95%E6%9E%84%E5%BB%BA"><span class="toc-number">3.3.</span> <span class="toc-text">索引构建</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%90%91%E9%87%8F%E6%90%9C%E7%B4%A2"><span class="toc-number">3.4.</span> <span class="toc-text">向量搜索</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%85%B6%E4%BB%96"><span class="toc-number">4.</span> <span class="toc-text">其他</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#LSH%E7%AE%97%E6%B3%95%E5%92%8C%E5%A4%9A%E5%93%88%E5%B8%8C%E8%A1%A8%E7%AD%96%E7%95%A5"><span class="toc-number">4.1.</span> <span class="toc-text">LSH算法和多哈希表策略</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%81%9A%E7%B1%BB%E8%BE%B9%E7%95%8C%E9%97%AE%E9%A2%98"><span class="toc-number">4.2.</span> <span class="toc-text">聚类边界问题</span></a></li></ol></li></ol></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">©&nbsp;2025 By YoathI</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.1"></script><script src="/js/main.js?v=5.5.1"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'ams',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zindex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async="" data-pjax="" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词…" type="text"></div><hr><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.1"></script></div></div></body></html>
