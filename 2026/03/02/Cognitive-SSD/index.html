@@ -1,0 +1,333 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Cognitive SSD | YoathI' Blog</title><meta name="author" content="YoathI"><meta name="copyright" content="YoathI"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="《Cognitive SSD: A Deep Learning Engine for In-Storage Data Retrieval》        总结              为解决数据分析和检索中I/O和数据迁移导致的响应延迟和能耗提升，本文提出了一种基于深度学习的非结构化数据检索引擎——Cognitive SSD，该引擎中的DLG-x闪存访问加速器被放置在闪存旁以实现近数据的深度学习">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Cognitive SSD">
+<meta property="og:url" content="https://yoathi.github.io/2026/03/02/Cognitive-SSD/index.html">
+<meta property="og:site_name" content="YoathI' Blog">
+<meta property="og:description" content="《Cognitive SSD: A Deep Learning Engine for In-Storage Data Retrieval》        总结              为解决数据分析和检索中I/O和数据迁移导致的响应延迟和能耗提升，本文提出了一种基于深度学习的非结构化数据检索引擎——Cognitive SSD，该引擎中的DLG-x闪存访问加速器被放置在闪存旁以实现近数据的深度学习">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yoathi.github.io/img/favicon.jpg">
+<meta property="article:published_time" content="2026-03-02T10:16:39.000Z">
+<meta property="article:modified_time" content="2026-03-04T06:13:25.236Z">
+<meta property="article:author" content="YoathI">
+<meta property="article:tag" content="ANNS">
+<meta property="article:tag" content="图索引">
+<meta property="article:tag" content="计算存储设备">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yoathi.github.io/img/favicon.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Cognitive SSD",
+  "url": "https://yoathi.github.io/2026/03/02/Cognitive-SSD/",
+  "image": "https://yoathi.github.io/img/favicon.jpg",
+  "datePublished": "2026-03-02T10:16:39.000Z",
+  "dateModified": "2026-03-04T06:13:25.236Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YoathI",
+      "url": "https://YoathI.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.jpg"><link rel="canonical" href="https://yoathi.github.io/2026/03/02/Cognitive-SSD/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="preconnect" href="//busuanzi.ibruce.info"><link rel="stylesheet" href="/css/index.css?v=5.5.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.json","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Cognitive SSD',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="/css/modify.css"><link rel="stylesheet" href="/css/layout.css"><link rel="stylesheet" href="/css/icat.css"><meta name="generator" content="Hexo 8.1.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/favicon.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">17</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">13</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">YoathI' Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Cognitive SSD</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!--菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><!-- 搜索按钮--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Cognitive SSD</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-03-02T10:16:39.000Z" title="发表于 2026-03-02 18:16:39">2026-03-02</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-03-04T06:13:25.236Z" title="更新于 2026-03-04 14:13:25">2026-03-04</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E8%BF%91%E5%86%85%E5%AD%98%E8%AE%A1%E7%AE%97/">近内存计算</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">4.6k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>14分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><div style="margin: 20px 0;"><center style="text-align: center; font-size: 20px;"><strong>《Cognitive SSD: A Deep Learning Engine for In-Storage Data Retrieval》</strong></center></div>
+
+
+<div style="background:#f7f7f7; padding:10px 15px; border-left:4px solid #ccc; color:#666;">
+    <strong>总结</strong>
+    <p style="color:#888; font-size:0.9em; text-indent: 2em;">
+        为解决数据分析和检索中I/O和数据迁移导致的响应延迟和能耗提升，本文提出了一种基于深度学习的非结构化数据检索引擎——Cognitive SSD，该引擎中的DLG-x闪存访问加速器被放置在闪存旁以实现近数据的深度学习和图搜索。
+    </p>
+</div>
+
+
+<h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p>本文提出了一种整体数据检索机制DLG，将深度学习和图搜索算法相结合，其中深度学习能够提取非结构化数据的语义特征，图搜索能够提高数据库搜索效率。为更好支持在SSD中嵌入DLG，本文设计了一种支持深度哈希和图搜索同时进行的专用硬件加速器DLG-x，从而在不适用功耗不可持续的CPU或GPU解决方案的情况下，构建Cognitive SSD。</p>
+<h1 id="相关技术"><a href="#相关技术" class="headerlink" title="相关技术"></a>相关技术</h1><p><strong>软硬件协同</strong></p>
+<p>在软硬件协同设计方面，SSD的研究有两个方向：开放通道SSD（open-channel SSD）和近数据处理（NDP）。开放通道SSD允许系统软件直接访问闪存，而近数据处理（NDP）则将计算从系统主处理器转移到内存或存储设备中。 </p>
+<p><strong>板载DRAM</strong></p>
+<p>板载DRAM指的是集成在SSD控制器电路板上的动态随机存取存储器（DRAM），也常被称为on-board DRAM或SSD DRAM cache。在SSD中，板载DRAM的主要作用不是做通用计算，而是用于存储和缓存与闪存管理相关的元数据。闪存控制器</p>
+<p><strong>闪存转换层</strong></p>
+<p>在固态硬盘（SSD）中，FTL（Flash Translation Layer，闪存转换层）是一项核心技术。FTL位于固态硬盘的控制器中，负责管理主机和闪存之间的数据交互，对SSD的性能（Performance）和可靠性（Reliability）起着至关重要的作用。</p>
+<p>FTL涉及多个关键功能模块，包括：映射表、坏块管理、垃圾回收、磨损均衡、错误管理等。</p>
+<p>参考<a target="_blank" rel="noopener" href="https://www.modevol.com/episode/fsgbn85ne8t4tap8vd87uyx1">FTL基础 - 渐构 Modevol</a></p>
+<p><strong>runtime system</strong></p>
+<p>运行时系统是一种将半编译代码在目标机器上运行的环境，采用介于编译和解释的执行方式。</p>
+<p> 参考<a target="_blank" rel="noopener" href="https://www.zhihu.com/tardis/bd/ans/2133648600">运行时（runtime）是什么意思？应该怎样深入且直观地理解？</a></p>
+<p><strong>DCNN</strong></p>
+<p>如图所示，深度卷积神经网络DCNN，其包含四类关键网络层：（1）卷积层：通过在组织成3D张量的输入数据上移动和卷积多维滤波器来提取视觉特征；（2）激活层：对信号进行的非线性转换；（3）池化层：对输入通道进行下采样以实现尺度和其他类型的不变性；（4）全连接层（FC）：在特征和学习到的权重之间执行线性操作，以预测输入数据的分类或其他高层特征。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260119121258223.png" alt="image-20260119121258223"></p>
+<p>直接使用FC层的高维输出向量进行数据检索在存储开销和计算复杂度方面代价较高，为此本文采用深度哈希来实现有效且紧凑的数据表示。如上图所示，在AlexNet最后一层后增加一个哈希层，将AlexNet学习到的数据特征映射到哈希空间，生成的哈希码可直接用于索引相关数据结构，从而避免复杂的数据预处理阶段。</p>
+<h1 id="Cognitive-SSD-System"><a href="#Cognitive-SSD-System" class="headerlink" title="Cognitive SSD System"></a>Cognitive SSD System</h1><p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260119143616074.png" alt="image-20260119143616074" style="zoom:75%;"></p>
+<p>Cognitive SSD系统如图所示，由两个主要部件组成：在轻量级服务器中运行并管理用户请求的<strong>DLG库</strong>和通过PCIe接口插入主机服务器的<strong>Cognitive SSD</strong>，Cognitive SSD用以支持DLG框架的主要组件。</p>
+<p>DLG 库是基于NVMe协议的I/O命令集中的供应商特定命令 (Vendor Specific Commands) 构建，包括配置库和用户库两部分，如图所示。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260119150428092.png" alt="DLG Library APIs for Cognitive SSD"></p>
+<p>配置库使管理员能够根据应用需求，快速在Cognitive SSD上选择和部署不同的深度学习模型。在具有特征提取功能的深度哈希模型部署到Cognitive SSD之后，到达主机服务器的数据处理请求可以通过调用用户库提供的API，向其发送并建立一个查询会话。然后，Cognitive SSD嵌入式处理器上的运行时系统（runtime system）会接收并解析该请求，以激活与用户创建的会话相关联的相应DLG-x模块。</p>
+<h2 id="DLG库"><a href="#DLG库" class="headerlink" title="DLG库"></a>DLG库</h2><h3 id="配置库"><a href="#配置库" class="headerlink" title="配置库"></a>配置库</h3><p>配置库提供了一个与主流深度学习框架（如 Caffe）兼容的<strong>DLG-x编译器</strong>，以允许管理员离线训练新的深度学习模型并生成相应的DLG-x指令。然后，管理员可以通过更新DLG-x指令来更新在Cognitive SSD上运行的学习模型。更新后的指令被发送到NAND闪存中分配的指令区，并在发出模型变更命令（DLG_config）之前一直保存在该区域中。</p>
+<p>同时，在深度学习模型和图的参数被写入NAND闪存之前，DLG-x编译器还会根据神经网络模型和图的结构，对 DLG 算法的数据布局进行重组，以充分利用内部闪存带宽。权重和图结构信息的物理地址被记录在DLG-x指令中。通过这种方式，DLG-x在运行时直接获取所需数据的物理地址，而不是采用会产生额外开销的地址转换或查找操作。</p>
+<h3 id="用户库"><a href="#用户库" class="headerlink" title="用户库"></a>用户库</h3><p><strong>Data Plane</strong></p>
+<p>数据平面为用户提供了 SSD_read 和 SSD_write 两个 API，用于控制主机服务器与Cognitive SSD之间的数据传输。这两个命令直接作用于物理地址，绕过闪存转换层（FTL）。用户可以调用这些API，根据数据地址和数据大小等参数，将来自用户的数据注入到Cognitive SSD的数据缓存区域或NAND闪存中。之后，用户可以在其他 API 中使用这些地址来指定操作数。</p>
+<p><strong>Task Plane</strong></p>
+<p>为提升DLG-x加速器的可扩展性，在任务平面中DLG-x的功能被抽象为三个API：DLG_hashing、DLG_index 和DLG_analysis。它们分别基于NVMe I/O协议中的C0h、C1h和C2h命令实现。所有这些API均通过NVMe协议的 DWord携带两个基本参数：指示Cognitive SSD中数据位置的数据地址和以字节为单位的数据大小。</p>
+<ul>
+<li><strong>DLG_hashing API</strong>：用于提取输入数据的压缩特征，并将其映射到哈希或语义空间。该命令包含一个扩展参数：哈希码长度，用于决定所携带信息的容量。例如，与包含500种对象类型的数据库相比，包含1000种对象的数据库需要更长的哈希码以避免信息丢失。 </li>
+<li><strong>DLG_index API</strong>：抽象自DLG-x的图搜索功能。它包含一个扩展参数T，代表用户根据应用场景配置的搜索结果数量。</li>
+<li><strong>DLG_analysis API</strong>：允许用户利用深度神经网络的数据分析和处理能力来分析输入数据，并预留了一个字段用于用户自定义功能。</li>
+</ul>
+<p style="color:#888; font-size:0.9em;">
+    <i>
+        上述任务API是Cognitive SSD提供的关键近数据处理核心的抽象，它们可以被独立或组合调用，以开发不同的 SSD 内数据处理功能。例如，用户可以组合DLG_hashing和DLG_index API来完成在大型数据库上的数据检索，其中DLG_hashing将查询数据的特征映射为哈希码，而DLG_index使用该哈希码搜索前T个最相似的实例。
+    </i>
+</p>
+
+
+<h3 id="Cognitive-SSD-Runtime"><a href="#Cognitive-SSD-Runtime" class="headerlink" title="Cognitive SSD Runtime"></a>Cognitive SSD Runtime</h3><p>Runtime system被部署在Cognitive SSD内部嵌入式处理器上，负责管理通过PCIe接口接收的扩展I/O命令，同时将与API相关的命令转换为DLG-x加速器可执行的机器指令并处理NAND闪存的基本操作。 </p>
+<p>Cognitive SSD Runtime包括<strong>请求调度器</strong>和<strong>基础固件</strong>。请求调度器由三个模块组成：DLG任务调度器、I/O调度器和DLG配置器。基础固件包含用于逻辑块映射、垃圾回收和坏块管理等功能的闪存转换层，并与NAND闪存控制器通信以处理通用I/O请求。</p>
+<ul>
+<li><strong>DLG配置器</strong>：从主机接收DLG_config命令，用于更新编译器生成的指令以及指定深度学习模型的参数。</li>
+<li><strong>DLG任务调度器</strong>：响应任务平面中支持的用户请求，并在Cognitive SSD中启动相应的任务会话。</li>
+<li><strong>I/O调度器</strong> 将I/O请求分派给基础固件或DLG-x加速器。</li>
+</ul>
+<p>DLG-x 加速器在激活后会占用相当一部分闪存带宽，可能会降低普通I/O请求的性能。为缓解这一问题，DLG任务调度器通过doorbell机制接收来自主机的NVMe命令，并周期性地主动轮询DLG-x的完成状态，以决定是否可以分发下一个请求。相比于让任务调度器或I/O调度器等待请求完成的方式，该方法能有效缓解普通I/O带宽降低。</p>
+<h2 id="硬件架构"><a href="#硬件架构" class="headerlink" title="硬件架构"></a>硬件架构</h2><p>Cognitive SSD的硬件架构如图所示：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260119143616074.png" alt="image-20260119143616074" style="zoom:75%;"></p>
+<p>Cognitive SSD由一个运行Cognitive SSD运行时系统的嵌入式处理器、一个DLG-x加速器和连接闪存芯片的NAND闪存控制器组成。每个NAND闪存控制器连接一个NAND闪存模块的通道，并使用一个ECC引擎进行纠错。SSD中有限的DRAM主要用于闪存管理的元数据缓存，几乎没有空闲空间供深度学习应用使用。当每个通道的设备以锁步方式并行访问时，内部带宽超过I/O接口的带宽。因此，NAND闪存控制器被暴露给DLG-x加速器，使得DLG-x能够直接从NAND闪存中读取和写入相关的工作数据，从而绕过内部DRAM。</p>
+<h2 id="Cognitive-SSD中的数据检索过程"><a href="#Cognitive-SSD中的数据检索过程" class="headerlink" title="Cognitive SSD中的数据检索过程"></a>Cognitive SSD中的数据检索过程</h2><p>当用户执行非结构化数据检索任务时，Cognitive SSD的整体处理流程：</p>
+<ol>
+<li>首先，假设Hash-AlexNet模型的硬件指令和参数已经通过利用DLG-x编译器和图中所示的DLG_config命令生成并写入到相应的区域。Hash-AlexNet是开发人员为输入数据特征提取而指定的神经网络。</li>
+<li>然后，当主机DLG库捕获到一个检索请求时，它通过SSD_write API将用户输入数据从指定的主机内存空间打包并写入Cognitive SSD。同时，携带输入数据地址的DLG_hashing命令被发送到Cognitive SSD以生成哈希码。</li>
+<li>接收到该命令后，Cognitive SSD Runtime的请求调度器会解析它，并通知DLG-x加速器启动一个哈希特征提取会话。然后，DLG-x自动从命令指定的数据地址获取输入查询数据，接着从NAND闪存加载深度学习参数。</li>
+<li>与此同时，另一个命令DLG_index被发送并由任务调度器排队。在哈希码生成后，DLG_index被分派以调用DLG-x中的图搜索功能，并使用哈希结果在数据图中搜索相关的数据条目。在这种情况下，DLG-x会持续从NAND闪存中获取图数据，并在任务完成后将最终的检索结果发送到主机内存。</li>
+</ol>
+<h1 id="DLG-x-Accelerator"><a href="#DLG-x-Accelerator" class="headerlink" title="DLG-x Accelerator"></a>DLG-x Accelerator</h1><h2 id="DLG-x架构"><a href="#DLG-x架构" class="headerlink" title="DLG-x架构"></a>DLG-x架构</h2><p>DLG-x加速器被设计为直接从NAND闪存中获取大部分工作集数据，其结构如图所示：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260120213650433.png" alt="image-20260120213650433" style="zoom: 67%;"></p>
+<p>DLG-x加速器包含两个激活缓冲区（InOut Buffer）和双排的权重缓冲区。各神经网络层的中间结果暂存于激活缓冲区，权重缓冲区则作为神经处理引擎（NPE）与闪存间的桥梁缓冲区，将大量神经参数流式传输至NPE。</p>
+<p>NPE由一组处理单元（PEs）构成，能够执行定点卷积、池化以及激活函数等运算。图搜索引擎（GSE）与NPE协同工作，负责利用NPE生成的哈希码执行图搜索操作。NPE与GSE均由控制单元管理，该单元从存储器中获取指令。</p>
+<h2 id="Data-Layout-In-Flash-Devices"><a href="#Data-Layout-In-Flash-Devices" class="headerlink" title="Data Layout In Flash Devices"></a>Data Layout In Flash Devices</h2><p>本文提出了一种闪存感知的数据布局方案，利用NAND闪存提供的页缓存顺序读取命令以充分发挥闪存带宽。该命令允许在前一页数据从缓存寄存器读取到DLG-x缓冲区或SSD缓存区域的同时，将同一块中的下一页连续加载到数据寄存器中。基于支持页缓存指令的NAND闪存架构，本文将卷积核进行分割，并将其存入闪存设备中，以实现并行读取。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260120213731529.png" alt="image-20260120213731529" style="zoom:67%;"></p>
+<p>如图所示，假设有N_k个卷积核，其核大小为S_k，且DLG-x加速器使用M个NAND闪存通道，则每个卷积核被分割为S_k/M个子块，所有这些子块以交错方式存储到各个闪存通道中。对于大小超过单个页面的卷积核，它们被放置在NAND闪存的连续地址空间内，因为缓存指令会自动读出下一页，无需任何额外的地址或操作。</p>
+<h2 id="数据流"><a href="#数据流" class="headerlink" title="数据流"></a>数据流</h2><p>以Hash-AlexNet为例，当一个请求到达DLG-x加速器时，输入数据以及第一卷积层的第一个卷积核，被并行传输至输入/输出缓冲区-0和权重缓冲区-0。随后，DLG-x加速器开始计算输出特征图，并将其存储到InOut缓冲区-1中。当第一个卷积核处理完毕时，第二个卷积核从NAND闪存传输至权重缓冲区-1，之后依次加载第三个和第四个卷积核。一旦哈希码生成完成，若DLG任务调度器解析并分发了后续的DLG_index命令，该哈希码将被送入NPE的图搜索寄存器中，用于定位与查询数据相似的数据结构。</p>
+<h2 id="深度学习和图搜索融合"><a href="#深度学习和图搜索融合" class="headerlink" title="深度学习和图搜索融合"></a>深度学习和图搜索融合</h2><p>DLG-x加速器将深度学习与图搜索机制融合，并复用计算与存储资源以提升整体效率。在查询数据的哈希码生成之后，DLG-x利用该哈希码对相应的数据图进行初始索引，并在图中搜索最接近的数据条目。</p>
+<p>DLG-x采用NSG算法进行图搜索，该算法包含离线和在线阶段。在离线阶段，NSG为向量数据构建有向最近邻图K_nbors。图中每个顶点表示一个数据条目，顶点中保存其唯一标识符ID和哈希码。唯一ID对应一个文件，哈希码为该文件的特征向量，可通过预先调用DLG_hashing API获得。ID位宽和哈希码位宽可在API中进行配置。邻居数量K_nbors同样可以进行配置，以权衡检索精度和检索速度。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260120213650433.png" alt="image-20260120213650433" style="zoom: 67%;"></p>
+<p>如图所示，权重缓冲区和InOut缓冲区分别被复用于存储顶点的邻居信息以及图搜索引擎的搜索结果。相似度计算采用汉明距离，InOut缓冲区按照汉明距离的取值范围划分为多个区块。</p>
+<p>在图搜索过程中，系统引入了顶点检测单元（VDU）用于检查所选顶点是否已经被访问过。若发现该顶点此前已被遍历，则直接丢弃；否则，将其送入NPE单元计算其与查询顶点之间的汉明距离。在NPE提供距离信息后，缓冲区地址生成器（BAG）模块为该顶点在InOut缓冲区中分配存储空间，并将其放入对应的缓冲区区域中。尚未评估的顶点会从InOut缓冲区中取出，其邻居信息则由控制单元从权重缓冲区中加载。当InOut缓冲区中的顶点数量达到用户配置的阈值时，控制单元最终返回距离最近的前 T 个顶点，其中T同样由用户通过DLG_index API进行配置。</p>
+<p><strong>Data Layout for fast In-SSD NSG search</strong></p>
+<p>NAND闪存的读操作以页为粒度（16 KB）执行，因此，每当DLG-x访问某一顶点的邻域数据（约 250 字节）时，都必须从闪存中读取一个完整页面。为保持良好的空间局部性，将顶点V0及其所有邻居（V1,V2,…,V25）连续对齐并存储在同一页的起始位置，如图所示：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260120223140422.png" alt="image-20260120223140422" style="zoom:67%;"></p>
+<p>采用这种冗余的数据布局方式，以牺牲额外存储空间来换取更高的数据访问性能。</p>
+<p><strong>数据流</strong></p>
+<p>基于DLG-x的数据检索整体流程：</p>
+<ol>
+<li>首先，当一个查询到达时，DLG-x将输入数据和深度学习模型参数分别从NAND闪存加载到InOut缓冲区和权重缓冲区。</li>
+<li>随后，NPE单元为输入数据生成哈希码，并将其写入NPE的图搜索寄存器中。接着，DLG-x将K_nbors最近邻图从NAND闪存阵列传输至权重缓冲区。</li>
+<li>在第一阶段，计算初始顶点并将其送入InOut缓冲区中相应的区域。在第二阶段，DLG-x控制单元按照汉明距离从小到大的顺序，从InOut缓冲区中读取首个尚未评估的顶点。</li>
+<li>图搜索引擎从NAND闪存中获取该顶点的邻居，并将这些邻居送入NPE计算其与查询顶点之间的汉明距离。</li>
+<li>缓冲区地址生成器根据计算得到的汉明距离，为这些邻居顶点生成InOut缓冲区的写入地址，并将其写入缓冲区。同时，图搜索引擎中的计数器通过监测InOut缓冲区中已存储顶点的总数，判断是否需要发出终止信号。</li>
+<li>一旦生成终止信号，Cognitive SSD Runtime系统便从InOut缓冲区中读取顶点信息，并通过PCIe接口将存储在NAND闪存中的、由ID指向的检索结果传输回主机服务器。</li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://YoathI.github.io">YoathI</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://yoathi.github.io/2026/03/02/Cognitive-SSD/">https://yoathi.github.io/2026/03/02/Cognitive-SSD/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://YoathI.github.io" target="_blank">YoathI' Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/ANNS/">ANNS</a><a class="post-meta__tags" href="/tags/%E5%9B%BE%E7%B4%A2%E5%BC%95/">图索引</a><a class="post-meta__tags" href="/tags/%E8%AE%A1%E7%AE%97%E5%AD%98%E5%82%A8%E8%AE%BE%E5%A4%87/">计算存储设备</a></div><div class="post-share"><div class="social-share" data-image="/img/favicon.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer=""></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/03/02/FusionANNS/" title="FusionANNS"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">FusionANNS</div></div><div class="info-2"><div class="info-item-1">《Towards High-throughput and Low-latency Billionscale Vector Search via CPU/GPU Collaborative Filtering and Re-ranking》        总结              本文提出 FusionANNS：一种面向十亿规模 ANNS 的“CPU + GPU”协同处理架构。FusionANNS 仅使用一块入门级 GPU，即可同时实现高吞吐、低延迟、成本高效与高准确性。其核心思想是通过 CPU/GPU 协同的过滤与重排序，尽可能减少 GPU、CPU 与 SSD 之间的数据搬移。        FusionANNS概述本文提出了FusionANNS，一个基于SSD的GPU加速的ANNS系统，能够在十亿规模数据集上同时实现高吞吐、低延迟、成本高效与高准确性： 1、针对GPU/CPU协同过滤，使用多层级索引，显著降低CPU和GPU之间的数据传输。 2、使用启发式重排序，在重排序过程中消除不必要的I/O计算。 3、基于优化存储布局提出冗余感知的I/O去重，以进一步提高I/O效率。 ...</div></div></div></a><a class="pagination-related" href="/2026/01/11/MicroNN/" title="MicroNN"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">MicroNN</div></div><div class="info-2"><div class="info-item-1">《MicroNN: An On-device Disk-resident Updatable Vector Database》 研究背景个人设备蕴含着大量丰富的信息，而这些信息通常无法离开设备。因此，上下文化搜索与推荐应用需要具备能够在设备环境约束下运行的向量搜索能力。同时，在这种低资源环境中，内存资源高度受限，需要磁盘高效的索引结构和算法，并支持持续的插入和删除操作。 另一方面，最先进的向量数据管理系统通常针对的是拥有充足内存的大型服务器可用、向量集合为静态且不支持插入和删除操作，并且向量相似性搜索通常独立于结构化属性过滤等其他搜索标准的场景。这类系统缺乏必要的优化，无法支持需要在低资源环境中运行、同时支持更新和结合向量相似性搜索与结构化属性过滤的混合查询的可扩展设备端向量搜索用例。 基于上述，本文提出了一种面向低资源环境的嵌入式最近邻向量搜索引擎——MicroNN，以实现可扩展的相似性搜索和支持在用户个人设备上运行的应用程序。 IVF索引索引构建 建立IVF向量索引的过程包括三个主要步骤：K-means 聚类、向量分配和压缩编码（可选）。 1、均值聚类：在数据集 X 上运行K...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2025/11/09/SmartANNS/" title="SmartANNS"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20251109150923716.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-11-09</div><div class="info-item-2">SmartANNS</div></div><div class="info-2"><div class="info-item-1">《Scalable Billion-point Approximate Nearest Neighbor Search Using SmartSSDs》      总结              传统的ANNS算法需要在内存中维护大量索引，导致难以扩展到大规模数据集。现有的可行解决方案基于普通SSD，但该方案会导致I/O操作在执行时间中占比很大，并且ANNS引擎与其他软件协同工作会竞争PCIe带宽，会导致性能瓶颈。               本文通过在“主机CPU + SmartSSD”协同架构下，通过NDP技术，将高开销的向量搜索任务在SmartSSD上执行，减少与主机CPU的数据传输并降低对主机资源的占用，显著提高大规模数据集的向量搜索性能。               具体技术：1、分层索引架构：使用HBC算法进行分片，并单独为每个分片建立图索引。分片质心存储在主机内存，分片数据和图索引存储在SmartSSD中；2、基于学习的分片剪枝：对于不同的查询任务，通过GBDT模型动态预测需要搜索的最优分片数量，避免无关分片的遍历，降低计算开销；3、动态任务调度：根据分片热度和数据...</div></div></div></a><a class="pagination-related" href="/2025/10/31/DiskANN/" title="DiskANN"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/DiskANN-cover.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-10-31</div><div class="info-item-2">DiskANN</div></div><div class="info-2"><div class="info-item-1">《DiskANN: Fast Accurate Billion-point Nearest Neighbor Search on a Single Node》   DiskANN是面向SSD的十亿规模高效向量检索方案，其目标就是在单台机器上，使用有限的内存，实现对十亿级数据集的快速、高精度的最近邻搜索。 研究现状当前最先进的近似最相邻算法为了保证快速的高召回率，其产生的索引必须存储在内存中。但对于大规模高维数量集，单台服务器的内存容量会成为算法瓶颈，而使用分布式服务器对索引进行存储也会造成额外的磁盘访问开销和扩展成本较高。对于这些针对内存所设计的向量检索算法，如果将算法所构建的索引存储在SSD或采用混合模式会使得其实现比较复杂，还会造成搜索性能较差（搜索延迟灾难性上升和吞吐量急剧下降）。因此，如何突破内存容量的限制，实现既能处理海量数据又能保持低延迟的“磁盘友好型”向量搜索算法显得十分重要。 具体技术本文介绍了一种新型的基于图的索引构建算法Vamana，以及DiskANN整体系统的设计。 Vamana算法Vamana算法通过图结构优化减少磁盘访问次数。 Vamana算法使用Gre...</div></div></div></a><a class="pagination-related" href="/2026/03/02/FusionANNS/" title="FusionANNS"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-03-02</div><div class="info-item-2">FusionANNS</div></div><div class="info-2"><div class="info-item-1">《Towards High-throughput and Low-latency Billionscale Vector Search via CPU/GPU Collaborative Filtering and Re-ranking》        总结              本文提出 FusionANNS：一种面向十亿规模 ANNS 的“CPU + GPU”协同处理架构。FusionANNS 仅使用一块入门级 GPU，即可同时实现高吞吐、低延迟、成本高效与高准确性。其核心思想是通过 CPU/GPU 协同的过滤与重排序，尽可能减少 GPU、CPU 与 SSD 之间的数据搬移。        FusionANNS概述本文提出了FusionANNS，一个基于SSD的GPU加速的ANNS系统，能够在十亿规模数据集上同时实现高吞吐、低延迟、成本高效与高准确性： 1、针对GPU/CPU协同过滤，使用多层级索引，显著降低CPU和GPU之间的数据传输。 2、使用启发式重排序，在重排序过程中消除不必要的I/O计算。 3、基于优化存储布局提出冗余感知的I/O去重，以进一步提高I/O效率。 ...</div></div></div></a><a class="pagination-related" href="/2025/11/16/HM-ANN/" title="HM-ANN"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-11-16</div><div class="info-item-2">HM-ANN</div></div><div class="info-2"><div class="info-item-1">《HM-ANN: Efficient Billion-Point Nearest Neighbor Search on Heterogeneous Memory》       总结              本文基于异构内存（由PMem和DRAM组成）提出HM-ANN向量检索策略，综合考虑内存与数据的异构性，在无需压缩的情况下实现了单节点上的十亿级别的相似性检索。                   具体技术：1、改进HNSW算法，引入自上而下插入和自下而上提升阶段：对于HNSW算法构建最底层进行保留并置于慢速内存中；从底层图中提升枢纽节点形成上层图结构并置于快速内存；2、通过动态迁移等内存管理技术，实现从慢速内存预取待访问数据到快速内存，并通过并行搜索降低慢速内存中的搜索耗时；3、建立性能模型以根据搜索时间与召回率约束自动选择超参数。         研究背景因内存容量限制，ANNS算法的设计需要平衡精度与效率。现有的基于SSD的解决方案会大大增加I/O操作时间。异构内存可以大幅度增加内存容量，以便ANNS算法同时兼顾精度和效率，为ANNS算法的设计提供了新机遇。 异构内存 异...</div></div></div></a><a class="pagination-related" href="/2025/10/31/LEANN/" title="LEANN"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/LEANN-cover.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-10-31</div><div class="info-item-2">LEANN</div></div><div class="info-2"><div class="info-item-1">《LEANN: A Low-Storage Vector Index for Personal Devices》       总结              针对ANN向量索引存储开销大而无法部署在资源受限的边缘设备上的问题，该论文针对该问题提出了一种低存储的ANN向量检索策略——LEANN，LEANN通过不存储全部原始向量而在查询时对必要节点重新计算其向量表示的思想，使用即时重计算机制、两级遍历算法和高度数节点保留的剪枝算法等方法，在保证较高召回率和可容忍延迟的前提下，大幅度降低了向量检索在边缘设备上的存储开销。        研究背景目前基于嵌入的搜索（向量检索技术）已经被广泛应用在推荐系统和RAG中，个人设备对此也逐渐突显需求。但由于个人设备存储空间限制和ANN索引存储开销过大的原因，无法在个人设备中存储必要的索引结构。因此，减少索引存储开销和保持搜索质量和延迟成为了关键问题。 行业需求随着智能手机等边缘设备越来越普及，这些设备不断采集并生成多模态数据（如图像、文字、音频等）。这些数据如果能被有效地检索、组合起来，对用户回忆、检索过去信息、辅助智能应用等都有潜在价值。 边缘...</div></div></div></a><a class="pagination-related" href="/2025/12/25/LM-DiskANN/" title="LM-DiskANN"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-12-25</div><div class="info-item-2">LM-DiskANN</div></div><div class="info-2"><div class="info-item-1">《LM-DiskANN: Low Memory Footprint in  Disk-Native Dynamic Graph-Based ANN Indexing》       总结              现有的基于图的ANN算法，如DiskANN，每个图节点包含的路由决策信息不完整，需要将其所有邻居的向量加载到内存中，过程中会产生大量I/O操作。基于此，本文提出了LM-DiskANN，其中每个节点存储完整的邻居信息用于路由，搜索期间的总I/O次数将与DiskANN相似，但内存占用要低得多。        LM-DiskANN节点布局对于每个节点，与DiskANN相比，LM-DiskANN在邻居ID之后立即存储所有邻居的压缩向量，如图所示。  LM-DiskANN 磁盘节点的存储结构  每个节点以其ID开始,然后是其向量,然后是所有邻居的ID。如果邻居数量少于最大邻居数量,剩余空间用0填充。每个节点以邻居的压缩向量结束,如果邻居数量少于最大邻居数量,后面也跟随填充。 通过最大邻居数量控制，可以使得每个节点可以放入单个4KB页面中，与DIskANN相比，加载节点并不需要更多的...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%A6%82%E8%BF%B0"><span class="toc-number">1.</span> <span class="toc-text">概述</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%9B%B8%E5%85%B3%E6%8A%80%E6%9C%AF"><span class="toc-number">2.</span> <span class="toc-text">相关技术</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Cognitive-SSD-System"><span class="toc-number">3.</span> <span class="toc-text">Cognitive SSD System</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#DLG%E5%BA%93"><span class="toc-number">3.1.</span> <span class="toc-text">DLG库</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%85%8D%E7%BD%AE%E5%BA%93"><span class="toc-number">3.1.1.</span> <span class="toc-text">配置库</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%A8%E6%88%B7%E5%BA%93"><span class="toc-number">3.1.2.</span> <span class="toc-text">用户库</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Cognitive-SSD-Runtime"><span class="toc-number">3.1.3.</span> <span class="toc-text">Cognitive SSD Runtime</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%A1%AC%E4%BB%B6%E6%9E%B6%E6%9E%84"><span class="toc-number">3.2.</span> <span class="toc-text">硬件架构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Cognitive-SSD%E4%B8%AD%E7%9A%84%E6%95%B0%E6%8D%AE%E6%A3%80%E7%B4%A2%E8%BF%87%E7%A8%8B"><span class="toc-number">3.3.</span> <span class="toc-text">Cognitive SSD中的数据检索过程</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#DLG-x-Accelerator"><span class="toc-number">4.</span> <span class="toc-text">DLG-x Accelerator</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#DLG-x%E6%9E%B6%E6%9E%84"><span class="toc-number">4.1.</span> <span class="toc-text">DLG-x架构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Data-Layout-In-Flash-Devices"><span class="toc-number">4.2.</span> <span class="toc-text">Data Layout In Flash Devices</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E6%B5%81"><span class="toc-number">4.3.</span> <span class="toc-text">数据流</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E5%92%8C%E5%9B%BE%E6%90%9C%E7%B4%A2%E8%9E%8D%E5%90%88"><span class="toc-number">4.4.</span> <span class="toc-text">深度学习和图搜索融合</span></a></li></ol></li></ol></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">©&nbsp;2025 - 2026 By YoathI</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.1"></script><script src="/js/main.js?v=5.5.1"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'ams',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zindex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async="" data-pjax="" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词…" type="text"></div><hr><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.1"></script></div></div></body></html>
