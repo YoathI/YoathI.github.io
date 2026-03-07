@@ -1,0 +1,376 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>GustANN | YoathI' Blog</title><meta name="author" content="YoathI"><meta name="copyright" content="YoathI"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="GustANN概述现有的基于SSD的图索引ANNS系统通常依赖CPU执行搜索，但CPU计算能力成为系统瓶颈，导致无法充分利用多SSD的带宽。为解决这一问题，论文提出了以GPU为中心，CPU协同辅助的系统架构，即由 GPU 负责主要的图遍历与向量计算，而 CPU 辅助数据传输与调度，从而构建系统 GustANN：  内存高效的 GPU 内核：通过最小化图搜索过程中的显存占用，提升GPU与SSD并发度">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GustANN">
+<meta property="og:url" content="https://yoathi.github.io/2026/03/07/GustANN/index.html">
+<meta property="og:site_name" content="YoathI' Blog">
+<meta property="og:description" content="GustANN概述现有的基于SSD的图索引ANNS系统通常依赖CPU执行搜索，但CPU计算能力成为系统瓶颈，导致无法充分利用多SSD的带宽。为解决这一问题，论文提出了以GPU为中心，CPU协同辅助的系统架构，即由 GPU 负责主要的图遍历与向量计算，而 CPU 辅助数据传输与调度，从而构建系统 GustANN：  内存高效的 GPU 内核：通过最小化图搜索过程中的显存占用，提升GPU与SSD并发度">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yoathi.github.io/img/favicon.jpg">
+<meta property="article:published_time" content="2026-03-07T06:47:39.000Z">
+<meta property="article:modified_time" content="2026-03-07T06:49:36.470Z">
+<meta property="article:author" content="YoathI">
+<meta property="article:tag" content="GPU加速">
+<meta property="article:tag" content="图索引">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yoathi.github.io/img/favicon.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "GustANN",
+  "url": "https://yoathi.github.io/2026/03/07/GustANN/",
+  "image": "https://yoathi.github.io/img/favicon.jpg",
+  "datePublished": "2026-03-07T06:47:39.000Z",
+  "dateModified": "2026-03-07T06:49:36.470Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "YoathI",
+      "url": "https://YoathI.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.jpg"><link rel="canonical" href="https://yoathi.github.io/2026/03/07/GustANN/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"><link rel="preconnect" href="//busuanzi.ibruce.info"><link rel="stylesheet" href="/css/index.css?v=5.5.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.json","preload":true,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":400,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'GustANN',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><link rel="stylesheet" href="/css/modify.css"><link rel="stylesheet" href="/css/layout.css"><link rel="stylesheet" href="/css/icat.css"><meta name="generator" content="Hexo 8.1.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/favicon.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">18</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">13</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">7</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">YoathI' Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">GustANN</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!--菜单项--><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><!-- 搜索按钮--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">GustANN</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-03-07T06:47:39.000Z" title="发表于 2026-03-07 14:47:39">2026-03-07</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-03-07T06:49:36.470Z" title="更新于 2026-03-07 14:49:36">2026-03-07</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%BC%82%E6%9E%84%E8%AE%A1%E7%AE%97/">异构计算</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">5k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>15分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="GustANN概述"><a href="#GustANN概述" class="headerlink" title="GustANN概述"></a>GustANN概述</h1><p>现有的基于SSD的图索引ANNS系统通常依赖CPU执行搜索，但CPU计算能力成为系统瓶颈，导致无法充分利用多SSD的带宽。为解决这一问题，论文提出了以GPU为中心，CPU协同辅助的系统架构，即由 GPU 负责主要的图遍历与向量计算，而 CPU 辅助数据传输与调度，从而构建系统 GustANN：</p>
+<ol>
+<li><strong>内存高效的 GPU 内核</strong>：通过最小化图搜索过程中的显存占用，提升GPU与SSD并发度。</li>
+<li><strong>CPU 辅助数据传输</strong>：有效缓解了 GPU 端在数据传输时受到的 PCIe 带宽瓶颈。</li>
+<li><strong>枢纽搜索</strong>：实现了跨 SSD 负载均衡。</li>
+</ol>
+<h1 id="研究背景"><a href="#研究背景" class="headerlink" title="研究背景"></a>研究背景</h1><p>为保证成本效益，对于十亿级向量的高吞吐量检索，采用SSD比内存更佳，因其单位存储成本更低且容量更大；在高吞吐量ANNS场景中，图索引相较其他类型更具成本优势，因为图结构ANNS通过把向量连接成近邻图，搜索时只需在图中访问少量节点即可找到近邻，在同样硬件条件下可以处理更多查询，从而实现更高的系统吞吐量。</p>
+<p><strong>在高吞吐场景下CPU的整体算力存在根本性不足，无法充分利用多SSD的理论最大带宽，造成现有基于SSD的CPU图ANNS索引因CPU瓶颈难以实现高吞吐量。</strong></p>
+<ul>
+<li>以往的研究聚焦低延迟场景：当 CPU 发出一个读取请求后，必须等待 SSD 返回数据，导致SSD读取时间大于CPU计算时间，使得I/O延迟成为基于磁盘ANNS的性能瓶颈。</li>
+<li>在高吞吐场景（同时处理大量查询、发起大量SSD I/O）中：着重点在于QPS，由于CPU计算能力有限，其处理数据的速度可能低于 SSD 的数据传输能力，无法充分利用SSD的理论最大带宽，造成CPU算力成为性能瓶颈。</li>
+</ul>
+<p>因此，在ANNS系统中引入GPU算力成为可行方向，但现有基于GPU的ANNS方案仍存在局限：</p>
+<ul>
+<li>CPU主导、GPU辅助架构：由CPU执行图遍历，将向量计算卸载到GPU。ANNS的过程中仍受CPU性能制约。</li>
+<li>纯GPU架构：将图遍历和向量计算全量迁移到GPU以充分利用其大规模并行能力。受限于GPU显存容量与数据传入带宽，需要占用大量显存来维护visited table等与查询相关的数据及结构，且纯GPU架构通过GPU内核直接发起SSD读取，会形成新的性能瓶颈。</li>
+</ul>
+<p>针对上述问题，本文提出了GustANN，采用以GPU为中心、CPU协同辅助的架构：由GPU负责图遍历计算，并<strong>利用CPU协同处理数据传输，</strong>避免CPU搜索瓶颈对性能的限制，并通过在CPU侧进行I/O管理以缓解GPU入站带宽瓶颈问题。</p>
+<p><strong>引言最后一部分</strong></p>
+<h1 id="相关技术"><a href="#相关技术" class="headerlink" title="相关技术"></a>相关技术</h1><p><strong>基于磁盘的图结构ANNS</strong></p>
+<p>图被存储为多条记录，分布在 SSD 页上，每条记录对应一个图节点。每条记录包含全精度向量和由邻居 ID 构成的邻居列表。节点邻居数量由对应参数控制，确保记录大小固定，同一记录不会跨页存储。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260305105900613.png" alt="image-20260305105900613" style="zoom:50%;"></p>
+<center><strong>基于磁盘的图结构存储布局</strong></center>
+
+<p>对应 ANNS 搜索流程算法如下：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260305110942597.png" alt="image-20260305110942597" style="zoom: 45%;"></p>
+<p>候选集 S：存储当前查找到的距离最近的 L 个候选节点（ L 为搜索长度）；结果集 E：记录候选节点与查询向量的精确距离。</p>
+<p>搜索从固定的入口节点P开始，进行多轮迭代：</p>
+<ol>
+<li>读取当前待搜索节点u所在的SSD页面，获取对应全精度向量和邻居列表；</li>
+<li>将u标记为已搜索，计算与查询向量的距离，将u插入结果集；</li>
+<li>遍历u的所有邻居，为减少全精度向量的读取次数，通过PQ距离估算后插入候选集S；</li>
+<li>裁剪候选集规模至L以控制迭代次数，选择距离查询向量最近的未探索节点作为新的待搜索节点；</li>
+<li>当候选集未空时，搜索终止，返回结果集中top-k个节点。</li>
+</ol>
+<p><strong>Root Complex</strong></p>
+<p>根复合体（Root Complex, RC）是 PCIe 体系结构中的核心控制组件，<strong>负责连接 CPU/内存子系统与 PCIe 设备</strong>，如 SSD、GPU 等。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260305160043852.png" alt="image-20260305160043852" style="zoom:50%;"></p>
+<p>参考：<a target="_blank" rel="noopener" href="https://blog.csdn.net/a8039974/article/details/146231926">PCIe根复合体（Root Complex, RC） 的详细解析_pcie root complex-CSDN博客</a></p>
+<h1 id="主要挑战"><a href="#主要挑战" class="headerlink" title="主要挑战"></a>主要挑战</h1><p><strong>Challenge 1：</strong>高内存占用的搜索过程限制了系统并发度，而 GPU 与 SSD 均依赖高并发设计。</p>
+<p>GPU 和 SSD 均以高并发为设计核心：GPU 通过大量并行线程实现高算力，SSD 则通过并行处理多个请求以实现高带宽。因此结合 GPU 与 SSD 需要高度并发的系统设计。<strong>GPU 显存有限，若存储visited table等用于查询的数据结构，会导致 GPU 的显存被大量占用，同时处理的查询（并发查询）数量变少，从而无法充分发挥 GPU 和 SSD 的并行能力。</strong></p>
+<p><strong>Challenge 2：</strong>如何有效利用 CPU 协助数据传输以缓解 GPU 侧带宽瓶颈，尚未得到充分探索。</p>
+<p>在图索引ANNS场景下采用GPU直接访问技术，难以获得理想性能。所有 PCIe 设备首先连接至root complex，再通过高速链路连接至 CPU 与 DRAM，设备之间通常不存在直接连接。<strong>这导致SSD与GPU间传输带宽不对称——随着SSD数量增加，其聚合带宽可能超过GPU入站带宽上限，形成新瓶颈。</strong></p>
+<p><strong>Challenge 3：</strong>在 RAID-0 布局下，多 SSD 之间存在负载不均衡，降低整体搜索性能。</p>
+<p>RAID-0 将数据按固定大小的<strong>条带</strong>切分，然后依次分布到多个磁盘（或 SSD）上，以提升读写带宽和并行性能。</p>
+<p>为最大化利用SSD带宽，即使使用 RAID-0 布局把数据均匀分布到多块 SSD，上层的查询仍然会出现“延迟不均衡”，从而拖慢 GPU 批处理搜索的速度。<strong>因为不同查询访问的SSD不同，如果某块SSD被多次访问，会使多SSD之间负载不均衡，可能造成显著的长尾延迟。由于GPU通常是批处理查询，长尾延迟会拖慢整个批次的执行。</strong></p>
+<h1 id="GustANN具体设计"><a href="#GustANN具体设计" class="headerlink" title="GustANN具体设计"></a>GustANN具体设计</h1><p>GustANN 采用以 GPU 为中心、CPU 协同的架构，以实现高吞吐和高性价比的 ANNS。其整体架构如下：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260305162438084.png" alt="image-20260305162438084" style="zoom:50%;"></p>
+<ul>
+<li>针对挑战1，GustANN 设计了一种内存高效的图遍历 GPU 内核，通过冗余计算换取更小的内存空间，并设计了一种适用于 GPU 的并行图搜索算法来降低冗余计算的开销。</li>
+<li>针对挑战2，GustANN利用CPU辅助数据的选择与传输：访问图节点时，首先将对应页面从SSD传输至CPU DRAM，以充分利用SSD聚合带宽；随后仅将目标节点从DRAM传输至GPU，从而节省有限的GPU入站带宽。</li>
+<li>针对挑战3，GustANN 采用 pivot search 将查询分散至图的不同区域，从而避免单一区域的微尺度负载不均衡。</li>
+</ul>
+<h2 id="数据布局"><a href="#数据布局" class="headerlink" title="数据布局"></a>数据布局</h2><p>GustANN 采用<strong>基于磁盘的图结构ANNS将向量及其邻居信息存储在 SSD 上</strong>，并采用 RAID-0 方式对多块 SSD 进行数据条带化存储。对于  pivot search，<strong>GustANN 在 GPU 显存中存储一个 pivot 图</strong>。同时，将大多数数据结构如<strong>PQ压缩向量从 DRAM 移到 GPU 显存</strong>。</p>
+<p>GustANN 中 DRAM 的主要用途是作为 CPU 辅助传输中的缓冲区，以实现从 SSD 到 GPU 的选择性传输。与 GPU 直接访问相比，该方法能够缓解 GPU PCIe 带宽瓶颈。GustANN 主要利用 DRAM 的带宽优势，且其容量需求远低于其他基于 DRAM 的十亿级 ANNS 系统，从而降低服务器成本。</p>
+<h2 id="向量搜索"><a href="#向量搜索" class="headerlink" title="向量搜索"></a>向量搜索</h2><p><strong>单向量查询</strong></p>
+<p>初始化：GustANN 以与 DiskANN 类似的方式初始化查询。此外，还会执行枢轴搜索以实现负载均衡和决定主搜索的入口节点。</p>
+<p>搜索：搜索过程由 CPU 主导，CPU 负责协调 SSD 读取和 GPU 上的搜索。搜索过程采用与基于磁盘的图结构ANNS类似的方案，并将大多数计算放到 GPU 上执行。搜索的迭代过程包括：</p>
+<ol>
+<li>SSD 阶段：从 SSD 读取所选探索节点 u 对应的 SSD 页面到 DRAM，然后将页面中的目标记录传输到 GPU。</li>
+<li>GPU 阶段：在 GPU 上执行距离计算和数据结构更新，并选择下一次 SSD 阶段的探索节点。</li>
+</ol>
+<p><strong>多向量查询</strong></p>
+<p>为了支持高吞吐量的 ANNS，GustANN 将查询放入批处理中，以进一步利用 GPU 的计算能力和 SSD 的读取带宽。</p>
+<p>但是由于图遍历过程是顺序的，<strong>在不同阶段之间存在强依赖关系</strong>，例如探索节点以及来自 SSD 的记录。因此，这两个阶段无法同时运行，导致一半的硬件资源被浪费。为了进一步挖掘硬件潜力，GustANN 引入了<strong>查询间流水线（inter-query pipelining）</strong>。不同于将所有查询放入一个大型批处理中，GustANN将其拆分为多个小批次（mini-batches）。这些批次彼此独立，因此两个阶段可以被不同的小批次填充，从而使所有硬件资源都能够得到利用。</p>
+<p>&gt; 如 t1 时间，SSD 阶段执行 batch1，t2 时间，SSD阶段执行 batch2，GPU阶段执行 batch1</p>
+<h2 id="GPU内核设计"><a href="#GPU内核设计" class="headerlink" title="GPU内核设计"></a>GPU内核设计</h2><p><strong>visited table 内存占用过高</strong></p>
+<p>论文通过分析说明在图索引搜索过程中所维护的 visited table 占据了较大的内存比例。相比之下，候选集仅需存储 L 个节点；其他结构（如记录缓存和 PQ 查找表）在整个搜索过程中大小固定。且GustANN 需要支持高并发，由于GPU显存有限，且需存储PQ编码等数据结构，会导致开销过大，不可接受。</p>
+<p><strong>GPU上的冗余计算是可接受的</strong></p>
+<p>在 CPU 上执行 ANNS 时，通常在距离计算前消除重复邻居，以避免 PQ 距离的冗余计算。然而，GPU 线程以 warp 为执行粒度，同一warp 内线程始终执行相同指令或处于等待状态。因此，单个线程的冗余计算往往可被其他线程掩盖，不会显著增加总体时间开销。</p>
+<p>&gt; 即传统基于 CPU 的 ANNS 算法通常依赖占用大量内存的数据结构，以空间换时间的方式消除冗余计算，但这种方式并不适用于 GPU。而GPU 的 SIMT架构能够天然容忍一定程度的冗余计算。</p>
+<p>基于上述观察，GustANN 首先执行距离计算与排序，再对排序后的数组进行去重。由于排序后的数组可通过<strong>线性扫描完成去重</strong>，因此无需访问记录表等额外数据结构。此外，GPU 的 warp 执行机制能够掩盖距离计算与排序中的冗余计算开销，不会带来显著时间开销。</p>
+<h3 id="算法设计"><a href="#算法设计" class="headerlink" title="算法设计"></a>算法设计</h3><p>GustANN 对基于磁盘的图索引 ANNS 进行改进，采用“先排序、后去重”的搜索算法。在搜索过程中，根据PQ距离将候选集组织为有序数组，数组中的每个元素包含候选节点 ID 及其 PQ 距离，并额外使用 1 个比特标记该节点是否已被探索。算法执行流程如下：</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260306113339916.png" alt="image-20260306113339916" style="zoom: 50%;"></p>
+<p>在每一轮搜索迭代中，首先执行 SSD 阶段读取当前探索节点的所有邻居；随后通过下列步骤在 GPU 阶段将这些邻居加入候选集：</p>
+<p>1、PQ距离计算：计算当前探索节点的所有邻居的 PQ 距离。</p>
+<p>使用 R（邻居数量）个 GPU 线程，每个线程负责计算一个邻居的 PQ 距离。</p>
+<p style="color:#888; font-size:0.9em;">
+    <i>
+        由于 GPU 以 warp 为执行单位，重复邻居导致的冗余计算可以被其他线程的计算隐藏，因此不会显著增加整体时间开销。
+    </i>
+</p>
+
+
+<p>2、排序：将所有邻居追加至候选集，并按照 PQ 距离进行排序：</p>
+<ol>
+<li>对当前轮新增的邻居进行排序；</li>
+<li>将排序后的邻居与上一轮剩余的候选集部分进行归并。</li>
+</ol>
+<p>两个步骤均采用并行归并排序，排序阶段同样使用 R 个 GPU 线程，并将其与 PQ 距离计算<strong>内核融合</strong>，以更好地利用 GPU 的高带宽共享内存。</p>
+<p>3、去重：排序后，候选集中仍会存在重复元素，因此需要执行去重操作，然后选择前L个元素作为新的候选集。</p>
+<p>该过程通过对候选集中所有节点 ID （数组 a ）进行<strong>线性扫描完成</strong>，变量 $x_i$ 表示从 $a_1$ 到 $a_i$ 之间重复元素的数量，计算公式如下：</p>
+<script type="math/tex; mode=display">
+\left\{ \begin{aligned} x_i &= x_{i-1} + \delta(a_i, a_{i-1}), & i \geq 1 \\ x_0 &= 0 \end{aligned} \right.</script><p>其中 $\delta(m, n)$ 在 $m = n$ 时返回 1，否则返回 0。对于所有满足 $a<em>i \neq a</em>{i-1}$ 的 $i$，将 $a<em>i$（以及该节点的其他元素）移动到 $a</em>{i-x_i}$ 。</p>
+<p>为了利用并行能力，使用 $B = 32$ 个 GPU 线程（一个 warp ）执行扫描，将扫描分为多个轮次，每一轮同时扫描数组 $a$ 中的 $B$ 个元素。在第 $k$ 轮扫描中，第 $i$ 个线程（$0 \leq i &lt; B$）处理第$(Bk + i)$ 个元素。首先计算$b<em>i = \delta(a</em>{Bk+i}, a_{Bk+i-1})$，然后每个线程将 $b_i$ 广播给其他线程，可通过 CUDA 的 warp 原语实现。结果表示为一个 $B$ 位整数 $b$，其中第 $i$ 位为 $b_i$，在同步之后，第 $i$ 个线程计算</p>
+<script type="math/tex; mode=display">
+x_{Bk+i} = x_{Bk-1} + \text{bitcount}(b_{0..i})</script><p>其中 $b<em>{0..i}$ 是 $b$ 中的前 $i$ 位，$\text{bitcount}(b</em>{0..i})$即统计其中 1 的数量。$x<em>{Bk-1}$ 为上一轮扫描结束时的重复元素数量，且对于 $k = 0$ 时假设 $x</em>{-1} = 0$。$x_{Bk+i}$ 即表示从数组开始到当前元素，一共有多少重复元素。</p>
+<p>之后每个线程重复执行上述数据移动操作。由于每个重复元素在列表中只会出现两次（一次来自邻居列表，另一次来自之前的候选集合）。因此，在去重之前只有前 $\min(L + R, 2L)$ 个元素可能成为新的候选节点。所以，只用对这些元素执行扫描和去重，从而减少计算量。</p>
+<p style="color:#888; font-size:0.9em;">
+    <i>
+        L 为下一轮保留的候选集合大小（只取前 L 个），R 为当前探索节点的邻居数量，candidate set = 旧候选集合 + 新加入的邻居 = L + R，而算法只用选择前 L 个最小距离的节点作为新的候选集合，排在 L 之后的元素一定不会被选中。
+    </i>
+</p>
+
+
+<h2 id="CPU辅助数据传输"><a href="#CPU辅助数据传输" class="headerlink" title="CPU辅助数据传输"></a>CPU辅助数据传输</h2><p>SSD 不共享 PCIe通道，多 SSD 带宽聚合较高，但 GPU 带宽受到 PCIe 通道限制，导致SSD 与 GPU 之间的带宽不对称，造成GPU 对 SSD 的直接访问无法充分利用多个 SSD 的带宽潜力。</p>
+<p><img src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/image-20260306164526864.png" alt="image-20260306164526864" style="zoom:55%;"></p>
+<p>搜索过程中的GPU阶段，GPU线程会读取一个驻留在 SSD 上的记录，其大小小于 SSD 页。但 GPU 直接访问无法选择性传输数据，因此利用 CPU 来辅助数据进行传输，并使用 CPU 的 DRAM 作为中转缓存区，如上图所示。步骤如下：</p>
+<ol>
+<li>将 SSD 页从 SSD 传输到 DRAM；</li>
+<li>仅将正在探索节点的图记录从 DRAM 传输到 GPU。</li>
+</ol>
+<h2 id="枢纽搜索"><a href="#枢纽搜索" class="headerlink" title="枢纽搜索"></a>枢纽搜索</h2><p>图索引ANNS采用单入口设计会导致在前几轮的迭代过程中，所有查询只会访问图中入口节点附近的区域。对于同一查询集合，节点被访问次数差异过大，可能导致某些 SSD 被多次请求，而其他 SSD 处于空闲状态，导致多 SSD 负载不均衡现象，造成尾延迟问题。</p>
+<p>&gt; 单入口设计会在图遍历的初始阶段仅访问入口节点附近的局部区域，而该区域中的节点在不同 SSD 之间分布不均。由于所有查询都必须首先访问该区域，这种微观层面的不均衡被进一步放大。</p>
+<p>GustANN使用 pivot search 将查询分散到图的不同区域，而不是集中在入口节点附近的单一区域：</p>
+<ol>
+<li>缓解负载不均衡问题，每个区域包含的节点更少，因此访问次数的差异会减小。</li>
+<li>如果初始区域更接近查询的最近邻，则可以获得更快的搜索速度。</li>
+</ol>
+<p>GustANN 引入<strong>GPU 驻留 pivot 图</strong>来缓解由单入口设计导致的 SSD 负载不均衡问题：</p>
+<ul>
+<li>从数据集中随机选取 pivot 向量（如对数据集采样 0.1%）来表示不同区域，并在 GPU 内存中构建一个 GPU 驻留的 pivot 图 G′。对于一个查询，首先在 G′ 上执行 top-1 搜索（即 pivot search）。得到的结果（采样集合中的最近向量）将被用作 SSD 驻留图搜索的入口节点。</li>
+</ul>
+<p>Pivot search 与上述图搜索类似，但存在差异：</p>
+<ol>
+<li>更短的搜索长度（即候选集长度），以减少整体搜索开销。</li>
+<li>使用全精度向量，而不是压缩的 PQ 编码，因为 pivot 图占用的内存很小。</li>
+<li>使用 选择排序而不是归并排序。因为搜索长度较小，选择排序更容易实现并行化。</li>
+</ol>
+<h1 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h1><h2 id="Warp-CUDA"><a href="#Warp-CUDA" class="headerlink" title="Warp(CUDA)"></a>Warp(CUDA)</h2><p><strong>Warp</strong> 是 NVIDIA GPU 架构中线程调度和执行的基本单元，固定由 <strong>32 个线程</strong>组成。执行模式为SIMT， 同一个 Warp 内的所有 32 个线程在同一时刻执行<strong>完全相同的指令</strong>，但它们处理的是不同的数据。</p>
+<p>如果 32 个线程中，部分线程执行 A 指令，另一部分线程执行 B 指令（例如遇到 if-else 分支），GPU 硬件会通过“分支掩码”（Branch Mask）进行序列化处理：先执行完 A 分支的线程挂起等待，再执行 B 分支。这种现象称为 <strong>分支发散 (Branch Divergence)</strong>。</p>
+<h2 id="Kernel-Fusion"><a href="#Kernel-Fusion" class="headerlink" title="Kernel Fusion"></a>Kernel Fusion</h2><p>Kernel Fusion 即内核融合。Kernel 是一个被设计成在 GPU 等设备上运行的函数，比如矩阵相乘、向量加法、归一化等，是并行处理的最小逻辑单元。Kernel Fusion 是把多个小的计算任务合并成一个更大的任务，一次性计算完成，而不是一个一个单独调用。Kernel Fusion的优势：</p>
+<ul>
+<li><strong>减少内存读写</strong>：多个操作分开做时，中间结果需要读写内存，速度慢。融合后中间结果不用写内存，直接用，速度更快。</li>
+<li><strong>减少内核启动和调度开销</strong>：每次 kernel 启动都需要 CPU 提交任务并由 GPU 进行执行调度，因此会产生启动与调度开销。Kernel fusion 通过减少 kernel 启动次数，从而降低这些开销。</li>
+<li><strong>提升并行度和硬件利用率</strong>：融合后的 kernel 通常具有更大的计算规模，可以更充分地利用 GPU 的计算单元和内存带宽，从而提升整体性能。</li>
+</ul>
+<p>参考：<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/1937868912541820232">大模型性能优化-KernelFusion - 知乎</a></p>
+<p>参考：<a target="_blank" rel="noopener" href="https://www.cnblogs.com/hankeyyh/p/6580427.html">CUDA基础（1）：操作流程与kernel概念 - hankeyyh - 博客园</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://YoathI.github.io">YoathI</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://yoathi.github.io/2026/03/07/GustANN/">https://yoathi.github.io/2026/03/07/GustANN/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://YoathI.github.io" target="_blank">YoathI' Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%9B%BE%E7%B4%A2%E5%BC%95/">图索引</a><a class="post-meta__tags" href="/tags/GPU%E5%8A%A0%E9%80%9F/">GPU加速</a></div><div class="post-share"><div class="social-share" data-image="/img/favicon.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer=""></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/03/02/FusionANNS/" title="FusionANNS"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">FusionANNS</div></div><div class="info-2"><div class="info-item-1">《Towards High-throughput and Low-latency Billionscale Vector Search via CPU/GPU Collaborative Filtering and Re-ranking》        总结              本文提出 FusionANNS：一种面向十亿规模 ANNS 的“CPU + GPU”协同处理架构。FusionANNS 仅使用一块入门级 GPU，即可同时实现高吞吐、低延迟、成本高效与高准确性。其核心思想是通过 CPU/GPU 协同的过滤与重排序，尽可能减少 GPU、CPU 与 SSD 之间的数据搬移。        FusionANNS概述本文提出了FusionANNS，一个基于SSD的GPU加速的ANNS系统，能够在十亿规模数据集上同时实现高吞吐、低延迟、成本高效与高准确性： 1、针对GPU/CPU协同过滤，使用多层级索引，显著降低CPU和GPU之间的数据传输。 2、使用启发式重排序，在重排序过程中消除不必要的I/O计算。 3、基于优化存储布局提出冗余感知的I/O去重，以进一步提高I/O效率。 ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/03/02/FusionANNS/" title="FusionANNS"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-03-02</div><div class="info-item-2">FusionANNS</div></div><div class="info-2"><div class="info-item-1">《Towards High-throughput and Low-latency Billionscale Vector Search via CPU/GPU Collaborative Filtering and Re-ranking》        总结              本文提出 FusionANNS：一种面向十亿规模 ANNS 的“CPU + GPU”协同处理架构。FusionANNS 仅使用一块入门级 GPU，即可同时实现高吞吐、低延迟、成本高效与高准确性。其核心思想是通过 CPU/GPU 协同的过滤与重排序，尽可能减少 GPU、CPU 与 SSD 之间的数据搬移。        FusionANNS概述本文提出了FusionANNS，一个基于SSD的GPU加速的ANNS系统，能够在十亿规模数据集上同时实现高吞吐、低延迟、成本高效与高准确性： 1、针对GPU/CPU协同过滤，使用多层级索引，显著降低CPU和GPU之间的数据传输。 2、使用启发式重排序，在重排序过程中消除不必要的I/O计算。 3、基于优化存储布局提出冗余感知的I/O去重，以进一步提高I/O效率。 ...</div></div></div></a><a class="pagination-related" href="/2026/03/02/Cognitive-SSD/" title="Cognitive SSD"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-03-02</div><div class="info-item-2">Cognitive SSD</div></div><div class="info-2"><div class="info-item-1">《Cognitive SSD: A Deep Learning Engine for In-Storage Data Retrieval》        总结              为解决数据分析和检索中I/O和数据迁移导致的响应延迟和能耗提升，本文提出了一种基于深度学习的非结构化数据检索引擎——Cognitive SSD，该引擎中的DLG-x闪存访问加速器被放置在闪存旁以实现近数据的深度学习和图搜索。         概述本文提出了一种整体数据检索机制DLG，将深度学习和图搜索算法相结合，其中深度学习能够提取非结构化数据的语义特征，图搜索能够提高数据库搜索效率。为更好支持在SSD中嵌入DLG，本文设计了一种支持深度哈希和图搜索同时进行的专用硬件加速器DLG-x，从而在不适用功耗不可持续的CPU或GPU解决方案的情况下，构建Cognitive SSD。 相关技术软硬件协同 在软硬件协同设计方面，SSD的研究有两个方向：开放通道SSD（open-channel SSD）和近数据处理（NDP）。开放通道SSD允许系统软件直接访问闪存，而近数据处理（NDP）则将计算从系统主处理器转...</div></div></div></a><a class="pagination-related" href="/2025/12/23/AiSAQ/" title="AiSAQ"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-12-23</div><div class="info-item-2">AiSAQ</div></div><div class="info-2"><div class="info-item-1">《AiSAQ : All-in-Storage ANNS with Product Quantization for DRAM-free Information Retrieval》       总结              DiskANN 采用乘积量化技术以降低内存占用，但其内存开销仍与数据集规模成正比。基于该问题，本文提出了一种基于乘积量化的全存储式近似最近邻搜索方法 AiSAQ，将压缩后的向量完全卸载至 SSD 索引中。在十亿级规模的数据集上，AiSAQ 在查询阶段的内存占用仅约 10 MB，且未引入显著的查询延迟性能退化。此外，AiSAQ 显著降低了查询准备阶段的索引加载时间，从而支持在多个十亿级索引之间进行快速切换。         在近年来大语言模型LLM的发展趋势中，检索增强生成RAG被广泛用于利用外部知识源生成更准确的回答。在某些场景下，RAG 流水线需要同时接入多个外部知识源，此时检索器需要在不同索引之间进行“切换”。这一过程要求在服务期间将所有数据源的索引常驻于内存中，或在每次请求时从外部存储中加载索引数据，从而带来较高的内存开销或显著的加载延迟。 Draw...</div></div></div></a><a class="pagination-related" href="/2025/10/31/DiskANN/" title="DiskANN"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/DiskANN-cover.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-10-31</div><div class="info-item-2">DiskANN</div></div><div class="info-2"><div class="info-item-1">《DiskANN: Fast Accurate Billion-point Nearest Neighbor Search on a Single Node》   DiskANN是面向SSD的十亿规模高效向量检索方案，其目标就是在单台机器上，使用有限的内存，实现对十亿级数据集的快速、高精度的最近邻搜索。 研究现状当前最先进的近似最相邻算法为了保证快速的高召回率，其产生的索引必须存储在内存中。但对于大规模高维数量集，单台服务器的内存容量会成为算法瓶颈，而使用分布式服务器对索引进行存储也会造成额外的磁盘访问开销和扩展成本较高。对于这些针对内存所设计的向量检索算法，如果将算法所构建的索引存储在SSD或采用混合模式会使得其实现比较复杂，还会造成搜索性能较差（搜索延迟灾难性上升和吞吐量急剧下降）。因此，如何突破内存容量的限制，实现既能处理海量数据又能保持低延迟的“磁盘友好型”向量搜索算法显得十分重要。 具体技术本文介绍了一种新型的基于图的索引构建算法Vamana，以及DiskANN整体系统的设计。 Vamana算法Vamana算法通过图结构优化减少磁盘访问次数。 Vamana算法使用Gre...</div></div></div></a><a class="pagination-related" href="/2025/11/16/HM-ANN/" title="HM-ANN"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-11-16</div><div class="info-item-2">HM-ANN</div></div><div class="info-2"><div class="info-item-1">《HM-ANN: Efficient Billion-Point Nearest Neighbor Search on Heterogeneous Memory》       总结              本文基于异构内存（由PMem和DRAM组成）提出HM-ANN向量检索策略，综合考虑内存与数据的异构性，在无需压缩的情况下实现了单节点上的十亿级别的相似性检索。                   具体技术：1、改进HNSW算法，引入自上而下插入和自下而上提升阶段：对于HNSW算法构建最底层进行保留并置于慢速内存中；从底层图中提升枢纽节点形成上层图结构并置于快速内存；2、通过动态迁移等内存管理技术，实现从慢速内存预取待访问数据到快速内存，并通过并行搜索降低慢速内存中的搜索耗时；3、建立性能模型以根据搜索时间与召回率约束自动选择超参数。         研究背景因内存容量限制，ANNS算法的设计需要平衡精度与效率。现有的基于SSD的解决方案会大大增加I/O操作时间。异构内存可以大幅度增加内存容量，以便ANNS算法同时兼顾精度和效率，为ANNS算法的设计提供了新机遇。 异构内存 异...</div></div></div></a><a class="pagination-related" href="/2025/10/31/LEANN/" title="LEANN"><img class="cover" src="https://yoathi-blog.oss-cn-beijing.aliyuncs.com/img/LEANN-cover.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-10-31</div><div class="info-item-2">LEANN</div></div><div class="info-2"><div class="info-item-1">《LEANN: A Low-Storage Vector Index for Personal Devices》       总结              针对ANN向量索引存储开销大而无法部署在资源受限的边缘设备上的问题，该论文针对该问题提出了一种低存储的ANN向量检索策略——LEANN，LEANN通过不存储全部原始向量而在查询时对必要节点重新计算其向量表示的思想，使用即时重计算机制、两级遍历算法和高度数节点保留的剪枝算法等方法，在保证较高召回率和可容忍延迟的前提下，大幅度降低了向量检索在边缘设备上的存储开销。        研究背景目前基于嵌入的搜索（向量检索技术）已经被广泛应用在推荐系统和RAG中，个人设备对此也逐渐突显需求。但由于个人设备存储空间限制和ANN索引存储开销过大的原因，无法在个人设备中存储必要的索引结构。因此，减少索引存储开销和保持搜索质量和延迟成为了关键问题。 行业需求随着智能手机等边缘设备越来越普及，这些设备不断采集并生成多模态数据（如图像、文字、音频等）。这些数据如果能被有效地检索、组合起来，对用户回忆、检索过去信息、辅助智能应用等都有潜在价值。 边缘...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content is-expand"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#GustANN%E6%A6%82%E8%BF%B0"><span class="toc-number">1.</span> <span class="toc-text">GustANN概述</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%A0%94%E7%A9%B6%E8%83%8C%E6%99%AF"><span class="toc-number">2.</span> <span class="toc-text">研究背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%9B%B8%E5%85%B3%E6%8A%80%E6%9C%AF"><span class="toc-number">3.</span> <span class="toc-text">相关技术</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%BB%E8%A6%81%E6%8C%91%E6%88%98"><span class="toc-number">4.</span> <span class="toc-text">主要挑战</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#GustANN%E5%85%B7%E4%BD%93%E8%AE%BE%E8%AE%A1"><span class="toc-number">5.</span> <span class="toc-text">GustANN具体设计</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E5%B8%83%E5%B1%80"><span class="toc-number">5.1.</span> <span class="toc-text">数据布局</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%90%91%E9%87%8F%E6%90%9C%E7%B4%A2"><span class="toc-number">5.2.</span> <span class="toc-text">向量搜索</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GPU%E5%86%85%E6%A0%B8%E8%AE%BE%E8%AE%A1"><span class="toc-number">5.3.</span> <span class="toc-text">GPU内核设计</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%97%E6%B3%95%E8%AE%BE%E8%AE%A1"><span class="toc-number">5.3.1.</span> <span class="toc-text">算法设计</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CPU%E8%BE%85%E5%8A%A9%E6%95%B0%E6%8D%AE%E4%BC%A0%E8%BE%93"><span class="toc-number">5.4.</span> <span class="toc-text">CPU辅助数据传输</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9E%A2%E7%BA%BD%E6%90%9C%E7%B4%A2"><span class="toc-number">5.5.</span> <span class="toc-text">枢纽搜索</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%85%B6%E4%BB%96"><span class="toc-number">6.</span> <span class="toc-text">其他</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Warp-CUDA"><span class="toc-number">6.1.</span> <span class="toc-text">Warp(CUDA)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Kernel-Fusion"><span class="toc-number">6.2.</span> <span class="toc-text">Kernel Fusion</span></a></li></ol></li></ol></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">©&nbsp;2025 - 2026 By YoathI</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.1"></script><script src="/js/main.js?v=5.5.1"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'ams',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zindex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/canvas-nest.min.js"></script><script async="" data-pjax="" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="输入关键词…" type="text"></div><hr><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.1"></script></div></div></body></html>
